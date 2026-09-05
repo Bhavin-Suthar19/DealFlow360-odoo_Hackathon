@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import ConfirmModal from '../components/ui/ConfirmModal';
+import ToastContainer from '../components/ui/ToastContainer';
 
 const ModalContext = createContext(null);
 
 export const ModalProvider = ({ children }) => {
+  const [toasts, setToasts] = useState([]);
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
     title: '',
@@ -11,24 +13,18 @@ export const ModalProvider = ({ children }) => {
     confirmText: 'OK',
     cancelText: 'Cancel',
     variant: 'primary',
-    isAlertOnly: false,
     onConfirm: null,
     onCancel: null
   });
 
-  const showAlert = useCallback(({ title = 'Notice', message = '', variant = 'success', onConfirm = null }) => {
-    setModalConfig({
-      isOpen: true,
-      title,
-      message,
-      confirmText: 'OK',
-      variant,
-      isAlertOnly: true,
-      onConfirm: () => {
-        if (onConfirm) onConfirm();
-      },
-      onCancel: null
-    });
+  const removeToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const showAlert = useCallback(({ title = 'Notice', message = '', variant = 'success', duration = 4000, onConfirm = null }) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+    setToasts((prev) => [...prev, { id, title, message, variant, duration }]);
+    if (onConfirm) onConfirm();
   }, []);
 
   const showConfirm = useCallback(({
@@ -47,7 +43,6 @@ export const ModalProvider = ({ children }) => {
       confirmText,
       cancelText,
       variant,
-      isAlertOnly: false,
       onConfirm: () => {
         if (onConfirm) onConfirm();
       },
@@ -59,7 +54,7 @@ export const ModalProvider = ({ children }) => {
 
   const closeModal = useCallback(() => {
     setModalConfig((prev) => {
-      if (prev.onCancel && !prev.isAlertOnly) {
+      if (prev.onCancel) {
         prev.onCancel();
       }
       return { ...prev, isOpen: false };
@@ -69,6 +64,7 @@ export const ModalProvider = ({ children }) => {
   return (
     <ModalContext.Provider value={{ showAlert, showConfirm, closeModal }}>
       {children}
+      <ToastContainer toasts={toasts} onCloseToast={removeToast} />
       <ConfirmModal
         isOpen={modalConfig.isOpen}
         onClose={closeModal}
@@ -78,7 +74,7 @@ export const ModalProvider = ({ children }) => {
         confirmText={modalConfig.confirmText}
         cancelText={modalConfig.cancelText}
         variant={modalConfig.variant}
-        isAlertOnly={modalConfig.isAlertOnly}
+        isAlertOnly={false}
       />
     </ModalContext.Provider>
   );

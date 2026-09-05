@@ -2,53 +2,109 @@ import React, { useState } from 'react';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import { Building2, Lock, Mail, ShieldCheck, ArrowRight, User, Users } from 'lucide-react';
+import { Building2, Lock, Mail, ShieldCheck, User, Users, AlertTriangle } from 'lucide-react';
+import { useModal } from '../context/ModalContext';
+import { api, setAuthToken } from '../services/api';
 
-export const LoginView = ({ onLoginSuccess, onSelectPortal }) => {
+export const LoginView = ({ onLoginSuccess }) => {
+  const { showAlert } = useModal();
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
 
   // Login Form States
   const [loginEmail, setLoginEmail] = useState('alex.j@dealflow360.com');
   const [loginPassword, setLoginPassword] = useState('password123');
-  const [loginRole, setLoginRole] = useState('sales_rep');
 
   // Sign Up Form States
   const [fullName, setFullName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
-  const [department, setDepartment] = useState('Enterprise West');
-  const [signupRole, setSignupRole] = useState('sales_rep');
   const [signupPassword, setSignupPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [signupError, setSignupError] = useState('');
 
-  const handleLoginSubmit = (e) => {
+  // Lockout tracking
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    const roleNames = {
-      sales_rep: 'Alex Johnson',
-      sales_manager: 'J. Rao',
-      finance_ops: 'M. Shah',
-      admin: 'Elena Rostova'
-    };
-    onLoginSuccess({
-      name: roleNames[loginRole] || 'Alex Johnson',
-      email: loginEmail,
-      role: loginRole
-    });
+
+    if (isLocked) {
+      showAlert({
+        title: 'Account Temporarily Locked',
+        message: 'Account temporarily locked due to 5 consecutive failed login attempts. Please try again after 15 minutes.',
+        variant: 'danger'
+      });
+      return;
+    }
+
+    try {
+      const res = await api.auth.login({ email: loginEmail, password: loginPassword });
+      const userData = res.data?.user || res.user;
+      const token = res.data?.token || res.token;
+
+      if (token) {
+        setAuthToken(token);
+      }
+      setFailedAttempts(0);
+
+      onLoginSuccess(userData);
+    } catch (err) {
+      const errMsg = err.message || 'Invalid email or password';
+      const newAttempts = failedAttempts + 1;
+      setFailedAttempts(newAttempts);
+
+      if (newAttempts >= 5 || errMsg.includes('locked') || err.statusCode === 429) {
+        setIsLocked(true);
+        showAlert({
+          title: 'Account Temporarily Locked',
+          message: errMsg.includes('locked') ? errMsg : 'Account temporarily locked due to 5 consecutive failed login attempts. Please try again after 15 minutes.',
+          variant: 'danger'
+        });
+      } else {
+        const remaining = 5 - newAttempts;
+        showAlert({
+          title: 'Invalid Credentials Warning',
+          message: errMsg.includes('remaining') ? errMsg : `Invalid email or password. ${remaining} attempt(s) remaining before temporary account lock.`,
+          variant: 'warning'
+        });
+      }
+    }
   };
 
-  const handleSignupSubmit = (e) => {
+  const handleSignupSubmit = async (e) => {
     e.preventDefault();
     if (signupPassword !== confirmPassword) {
       setSignupError('Passwords do not match');
       return;
     }
     setSignupError('');
-    onLoginSuccess({
-      name: fullName || 'New Team Member',
-      email: signupEmail,
-      role: signupRole,
-      department
-    });
+
+    try {
+      await api.auth.signup({
+        name: fullName,
+        email: signupEmail,
+        password: signupPassword
+      });
+
+      setLoginEmail(signupEmail);
+      setLoginPassword(signupPassword);
+
+      showAlert({
+        title: 'Account Created Successfully!',
+        message: `Customer account created for ${fullName || signupEmail}. Redirecting to log in...`,
+        variant: 'success'
+      });
+
+      setTimeout(() => {
+        setMode('login');
+      }, 1500);
+    } catch (err) {
+      showAlert({
+        title: 'Sign Up Error',
+        message: err.message || 'Failed to create customer account. Please try again.',
+        variant: 'danger'
+      });
+    }
   };
 
   return (
@@ -63,17 +119,6 @@ export const LoginView = ({ onLoginSuccess, onSelectPortal }) => {
           <p className="text-xs text-[#714B67] uppercase font-bold tracking-wider">
             Complete B2B Sales, Quotation & Revenue Ops Platform
           </p>
-        </div>
-
-        {/* Dual Persona Banner */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-xs font-bold text-[#714B67] uppercase tracking-wider block">Customer Portal Access</span>
-            <p className="text-xs text-slate-600">View quotes & submit negotiation terms</p>
-          </div>
-          <Button size="sm" variant="outline" onClick={onSelectPortal} icon={ArrowRight}>
-            Portal Login
-          </Button>
         </div>
 
         {/* Card */}
@@ -102,6 +147,16 @@ export const LoginView = ({ onLoginSuccess, onSelectPortal }) => {
             </button>
           </div>
 
+          {isLocked && (
+            <div className="mb-4 bg-rose-50 border border-rose-300 rounded-xl p-3.5 flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+              <div>
+                <h4 className="text-xs font-bold text-rose-900">Account Temporarily Locked</h4>
+                <p className="text-[11px] text-rose-700">5 failed attempts detected. Try again after 15 minutes.</p>
+              </div>
+            </div>
+          )}
+
           {/* LOG IN FORM */}
           {mode === 'login' ? (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
@@ -122,28 +177,12 @@ export const LoginView = ({ onLoginSuccess, onSelectPortal }) => {
                 required
               />
 
-              <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-                  Select Role Persona
-                </label>
-                <select
-                  value={loginRole}
-                  onChange={(e) => setLoginRole(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-[#714B67]"
-                >
-                  <option value="sales_rep">Sales Rep (Alex Johnson)</option>
-                  <option value="sales_manager">Sales Manager (J. Rao)</option>
-                  <option value="finance_ops">Finance / Ops (M. Shah)</option>
-                  <option value="admin">System Administrator (Elena)</option>
-                </select>
-              </div>
-
-              <Button type="submit" variant="primary" className="w-full mt-2" icon={ShieldCheck}>
+              <Button type="submit" variant="primary" className="w-full mt-2" icon={ShieldCheck} disabled={isLocked}>
                 Sign In to Platform
               </Button>
             </form>
           ) : (
-            /* SIGN UP FORM */
+            /* SIGN UP FORM — PUBLIC SIGNUP (DEFAULTS TO CUSTOMER) */
             <form onSubmit={handleSignupSubmit} className="space-y-4">
               <Input
                 label="Full Name"
@@ -155,47 +194,14 @@ export const LoginView = ({ onLoginSuccess, onSelectPortal }) => {
                 required
               />
               <Input
-                label="Work Email Address"
+                label="Email Address"
                 type="email"
                 icon={Mail}
-                placeholder="s.jenkins@dealflow360.com"
+                placeholder="s.jenkins@customer.com"
                 value={signupEmail}
                 onChange={(e) => setSignupEmail(e.target.value)}
                 required
               />
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
-                    Department
-                  </label>
-                  <select
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#714B67]"
-                  >
-                    <option value="Enterprise West">Enterprise West</option>
-                    <option value="Global Finance">Global Finance</option>
-                    <option value="Core Sales">Core Sales</option>
-                    <option value="Operations">Operations</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
-                    Requested Role
-                  </label>
-                  <select
-                    value={signupRole}
-                    onChange={(e) => setSignupRole(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#714B67]"
-                  >
-                    <option value="sales_rep">Sales Representative</option>
-                    <option value="sales_manager">Sales Manager</option>
-                    <option value="finance_ops">Finance / Operations</option>
-                  </select>
-                </div>
-              </div>
 
               <Input
                 label="Password"
@@ -216,15 +222,19 @@ export const LoginView = ({ onLoginSuccess, onSelectPortal }) => {
                 required
               />
 
+              <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-xs text-purple-900 font-medium">
+                Public signups are automatically provisioned with <strong>Customer Account</strong> access. Internal staff accounts (Sales Rep, Manager, Finance Ops) are created by System Administrators.
+              </div>
+
               <Button type="submit" variant="primary" className="w-full mt-2" icon={Users}>
-                Create Account & Request Access
+                Create Customer Account
               </Button>
             </form>
           )}
 
           <div className="mt-6 pt-4 border-t border-slate-200 text-center">
             <span className="text-xs text-slate-500 font-medium">
-              Protected by JWT & RBAC Middleware Governance
+              Protected by Dual JWT Tokens, HttpOnly Cookies & Redis Lockout
             </span>
           </div>
         </Card>

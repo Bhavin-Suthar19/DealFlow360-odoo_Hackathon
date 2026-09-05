@@ -3,7 +3,7 @@ import { Building2, FileText, MessageSquare, User, LogOut } from 'lucide-react';
 
 export const CustomerPortalNavbar = ({
   customerName = 'Acme Corp',
-  onSwitchToInternal,
+  onLogout,
   activeTab = 'quote',
   onNavigate
 }) => {
@@ -35,6 +35,16 @@ export const CustomerPortalNavbar = ({
               <FileText className="w-4 h-4" /> My Quotation
             </button>
             <button
+              onClick={() => onNavigate && onNavigate('rfq')}
+              className={`flex items-center gap-2 cursor-pointer transition-colors ${
+                activeTab === 'rfq'
+                  ? 'text-[#714B67] font-bold border-b-2 border-[#714B67] py-5'
+                  : 'text-slate-600 hover:text-slate-900 font-medium py-5'
+              }`}
+            >
+              <Building2 className="w-4 h-4" /> Ask for Quotation
+            </button>
+            <button
               onClick={() => onNavigate && onNavigate('messages')}
               className={`flex items-center gap-2 cursor-pointer transition-colors ${
                 activeTab === 'messages'
@@ -58,10 +68,10 @@ export const CustomerPortalNavbar = ({
 
           <div className="flex items-center gap-3">
             <button
-              onClick={onSwitchToInternal}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+              onClick={onLogout}
+              className="flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-xl transition-colors cursor-pointer"
             >
-              <LogOut className="w-3.5 h-3.5 text-slate-500" /> Back to Internal Platform
+              <LogOut className="w-3.5 h-3.5" /> Log Out
             </button>
           </div>
         </div>

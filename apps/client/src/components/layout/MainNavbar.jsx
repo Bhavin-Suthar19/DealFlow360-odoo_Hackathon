@@ -60,66 +60,32 @@ export const MainNavbar = ({
             </div>
           </div>
 
-          {/* Persona & Navigation Controls */}
+          {/* User Profile & Logout Controls */}
           <div className="flex items-center gap-3">
-            {/* Persona Selector */}
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs">
-              <UserCheck className="w-3.5 h-3.5 text-[#714B67]" />
-              <span className="text-slate-500 font-medium">Role:</span>
-              <select
-                value={currentRole}
-                onChange={(e) => {
-                  const newRole = e.target.value;
-                  const roleNames = {
-                    sales_rep: 'Alex Johnson',
-                    sales_manager: 'J. Rao',
-                    finance_ops: 'M. Shah',
-                    admin: 'Elena Rostova'
-                  };
-                  setCurrentUser({
-                    ...currentUser,
-                    role: newRole,
-                    name: roleNames[newRole] || currentUser.name
-                  });
-                  const nextAllowed = allNavItems.filter((i) => i.roles.includes(newRole));
-                  if (!nextAllowed.some((i) => i.id === activeTab)) {
-                    setActiveTab('dashboard');
-                  }
-                }}
-                className="bg-transparent text-[#714B67] font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="sales_rep" className="bg-white text-slate-900">Sales Rep (Alex)</option>
-                <option value="sales_manager" className="bg-white text-slate-900">Sales Manager (J. Rao)</option>
-                <option value="finance_ops" className="bg-white text-slate-900">Finance / Ops (M. Shah)</option>
-                <option value="admin" className="bg-white text-slate-900">Admin (Elena)</option>
-              </select>
-            </div>
-
             {/* User Profile Quick Action */}
             <button
               onClick={() => setActiveTab('profile')}
-              className="text-right hidden sm:block group cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              className="text-right flex items-center gap-2 group cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
             >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-[#714B67] text-white flex items-center justify-center font-bold text-xs">
-                  <User className="w-4 h-4 text-white" />
-                </div>
-                <div className="text-left">
-                  <span className="block text-xs font-bold text-slate-800 group-hover:text-[#714B67]">{currentUser.name}</span>
-                  <span className="block text-[10px] text-[#714B67] font-semibold uppercase tracking-wider">
-                    {currentRole.replace('_', ' ')}
-                  </span>
-                </div>
+              <div className="w-8 h-8 rounded-full bg-[#714B67] text-white flex items-center justify-center font-bold text-xs">
+                <User className="w-4 h-4 text-white" />
+              </div>
+              <div className="text-left hidden sm:block">
+                <span className="block text-xs font-bold text-slate-800 group-hover:text-[#714B67]">{currentUser?.name || 'User'}</span>
+                <span className="block text-[10px] text-[#714B67] font-semibold uppercase tracking-wider">
+                  {currentRole.replace('_', ' ')}
+                </span>
               </div>
             </button>
 
             {/* Logout */}
             <button
               onClick={onLogout}
-              title="Logout / Switch Persona"
-              className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-rose-600 border border-slate-200 transition-colors cursor-pointer"
+              title="Log Out"
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-xl transition-colors cursor-pointer"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Log Out</span>
             </button>
           </div>
         </div>

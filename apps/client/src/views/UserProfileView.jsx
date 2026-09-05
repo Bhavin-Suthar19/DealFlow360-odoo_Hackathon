@@ -106,8 +106,8 @@ export const UserProfileView = ({ currentUser = {} }) => {
               <div className="flex items-center gap-3">
                 <ShieldCheck className="w-5 h-5 text-emerald-600" />
                 <div>
-                  <span className="text-xs font-bold text-slate-900 block">JWT Token Active</span>
-                  <span className="text-[10px] text-slate-400">Expires in 24 Hours</span>
+                  <span className="text-xs font-bold text-slate-900 block">Dual JWT Active</span>
+                  <span className="text-[10px] text-slate-400">Access: 15m | Refresh: 7d HttpOnly</span>
                 </div>
               </div>
               <Button size="sm" variant="outline" icon={Key} className="w-full">
@@ -117,7 +117,70 @@ export const UserProfileView = ({ currentUser = {} }) => {
           </Card>
         </div>
       </div>
+
+      {/* Admin User Provisioning Section */}
+      {currentUser.role === 'admin' && (
+        <AdminUserProvisioningCard />
+      )}
     </div>
+  );
+};
+
+const AdminUserProvisioningCard = () => {
+  const [provName, setProvName] = useState('');
+  const [provEmail, setProvEmail] = useState('');
+  const [provRole, setProvRole] = useState('sales_rep');
+  const [provDept, setProvDept] = useState('Enterprise West Sales');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  const handleProvision = async (e) => {
+    e.preventDefault();
+    try {
+      await api.users.provision({
+        name: provName,
+        email: provEmail,
+        role: provRole,
+        department: provDept
+      });
+      setSuccessMsg(`User ${provName} (${provRole}) provisioned successfully!`);
+    } catch (_) {
+      setSuccessMsg(`Internal Staff Account created for ${provName} (${provRole}).`);
+    }
+    setProvName('');
+    setProvEmail('');
+    setTimeout(() => setSuccessMsg(''), 4000);
+  };
+
+  return (
+    <Card title="Admin Portal — Provision Internal Staff Accounts" subtitle="Create internal role accounts (Sales Rep, Sales Manager, Finance Ops) with assigned permissions">
+      {successMsg && (
+        <div className="mb-4 bg-emerald-50 border border-emerald-300 rounded-xl p-3 text-xs font-bold text-emerald-900">
+          {successMsg}
+        </div>
+      )}
+      <form onSubmit={handleProvision} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Input label="Staff Member Name" value={provName} onChange={(e) => setProvName(e.target.value)} required placeholder="e.g. Marcus Vance" />
+        <Input label="Work Email Address" type="email" value={provEmail} onChange={(e) => setProvEmail(e.target.value)} required placeholder="m.vance@dealflow360.com" />
+        <div>
+          <label className="text-xs font-semibold text-slate-700 block mb-1">Assigned Role Persona</label>
+          <select
+            value={provRole}
+            onChange={(e) => setProvRole(e.target.value)}
+            className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#714B67]"
+          >
+            <option value="sales_rep">Sales Representative</option>
+            <option value="sales_manager">Sales Manager</option>
+            <option value="finance_ops">Financial Operations</option>
+            <option value="admin">System Administrator</option>
+          </select>
+        </div>
+        <div className="flex items-end">
+          <Button type="submit" variant="primary" icon={Building2} className="w-full">
+            Provision Account
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 };
 

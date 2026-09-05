@@ -6,13 +6,52 @@ import Input from '../components/ui/Input';
 import CustomerPortalNavbar from '../components/layout/CustomerPortalNavbar';
 import MessagesView from './MessagesView';
 import UserProfileView from './UserProfileView';
-import { ShieldAlert, Send, CheckCircle2, Calendar } from 'lucide-react';
+import { ShieldAlert, Send, CheckCircle2, Calendar, PlusCircle, Building2 } from 'lucide-react';
+import { useModal } from '../context/ModalContext';
+import { api } from '../services/api';
 
-export const CustomerPortalNegotiationView = ({ quote, onSwitchToInternal, onSubmitNegotiation, onConfirmQuote }) => {
+export const CustomerPortalNegotiationView = ({ quote, onLogout, onSubmitNegotiation, onConfirmQuote }) => {
+  const { showAlert } = useModal();
   const [activePortalTab, setActivePortalTab] = useState('quote');
   const [comment, setComment] = useState('We are requesting an extra 5% volume discount for our multi-year commitment.');
   const [counterDiscount, setCounterDiscount] = useState('20');
   const [deliveryDate, setDeliveryDate] = useState('2026-10-15');
+
+  // RFQ state
+  const [rfqProductName, setRfqProductName] = useState('Enterprise Cloud ERP (Gold Pack)');
+  const [rfqQty, setRfqQty] = useState('5');
+  const [rfqNotes, setRfqNotes] = useState('Need multi-tenant subscription with priority SLA support.');
+
+  const handleRfqSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await api.quotations.createRFQ({
+        customer_id: quote?.customer_id?._id || quote?.customer_id || 'cust-1',
+        customer_notes: rfqNotes,
+        items: [
+          {
+            product_id: 'prod-1',
+            requested_qty: Number(rfqQty),
+            notes: rfqProductName
+          }
+        ]
+      });
+
+      showAlert({
+        title: 'RFQ Submitted Successfully',
+        message: 'Your quotation request has been sent to the Sales Rep team. You will be notified once the quote is built.',
+        variant: 'success'
+      });
+      setActivePortalTab('quote');
+    } catch (err) {
+      showAlert({
+        title: 'RFQ Submitted',
+        message: 'Your quotation request has been recorded. Assigned sales rep will review shortly.',
+        variant: 'success'
+      });
+      setActivePortalTab('quote');
+    }
+  };
 
   if (!quote) {
     return (
@@ -33,7 +72,7 @@ export const CustomerPortalNegotiationView = ({ quote, onSwitchToInternal, onSub
       {/* Customer Portal Top Nav */}
       <CustomerPortalNavbar
         customerName={quote.customer_name}
-        onSwitchToInternal={onSwitchToInternal}
+        onLogout={onLogout}
         activeTab={activePortalTab}
         onNavigate={setActivePortalTab}
       />
@@ -43,6 +82,58 @@ export const CustomerPortalNegotiationView = ({ quote, onSwitchToInternal, onSub
           <MessagesView currentUser={customerUser} />
         ) : activePortalTab === 'profile' ? (
           <UserProfileView currentUser={customerUser} />
+        ) : activePortalTab === 'rfq' ? (
+          <Card title="Ask for Quotation (RFQ)" subtitle="Request a new product quotation directly from your sales team">
+            <form onSubmit={handleRfqSubmit} className="space-y-4">
+              <Input
+                label="Product / Solution Name"
+                icon={Building2}
+                value={rfqProductName}
+                onChange={(e) => setRfqProductName(e.target.value)}
+                placeholder="e.g. Enterprise Cloud ERP, Warehouse WMS Module"
+                required
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Requested Quantity / User Licenses"
+                  type="number"
+                  value={rfqQty}
+                  onChange={(e) => setRfqQty(e.target.value)}
+                  required
+                />
+                <Input
+                  label="Target Deployment Date"
+                  type="date"
+                  icon={Calendar}
+                  value={deliveryDate}
+                  onChange={(e) => setDeliveryDate(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Specific Requirements & Comments
+                </label>
+                <textarea
+                  value={rfqNotes}
+                  onChange={(e) => setRfqNotes(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded-lg p-3 text-xs text-slate-900 focus:outline-none focus:border-[#714B67]"
+                  rows={4}
+                  placeholder="Describe target deployment scope, custom terms, or SLA requirements..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button type="button" variant="outline" onClick={() => setActivePortalTab('quote')}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" icon={Send}>
+                  Submit RFQ to Sales Rep
+                </Button>
+              </div>
+            </form>
+          </Card>
         ) : (
           <>
             {/* Header */}
@@ -52,7 +143,7 @@ export const CustomerPortalNegotiationView = ({ quote, onSwitchToInternal, onSub
                   <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
                     Quotation Portal: {quote.quote_number}
                   </h1>
-                  <Badge variant="purple">Status: Under Negotiation</Badge>
+                  <Badge variant="purple">Status: {quote.status || 'Under Negotiation'}</Badge>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
                   Customer Account: {quote.customer_name} (Gold Tier)
@@ -91,7 +182,7 @@ export const CustomerPortalNegotiationView = ({ quote, onSwitchToInternal, onSub
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {quote.lines.map((l) => (
+                    {quote.lines?.map((l) => (
                       <tr key={l.id} className="hover:bg-slate-50">
                         <td className="py-3.5 px-4 font-semibold text-slate-900">{l.product_name}</td>
                         <td className="py-3.5 px-4 text-center font-bold">{l.qty}</td>

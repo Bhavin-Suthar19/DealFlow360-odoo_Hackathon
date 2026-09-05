@@ -8,17 +8,22 @@ export const QuotationsKanbanView = ({ quotations = [], onSelectQuote, onCreateQ
   const [viewMode, setViewMode] = useState('kanban');
 
   const columns = [
-    { id: 'Draft', title: 'Draft', color: 'border-slate-300 bg-slate-100/50' },
-    { id: 'Pending Approval', title: 'Pending Approval', color: 'border-amber-300 bg-amber-50/50' },
-    { id: 'Approved', title: 'Approved', color: 'border-emerald-300 bg-emerald-50/50' },
-    { id: 'Negotiation', title: 'Negotiation', color: 'border-cyan-300 bg-cyan-50/50' },
-    { id: 'Confirmed', title: 'Confirmed', color: 'border-emerald-300 bg-emerald-50/50' }
+    { id: 'RFQ Received', title: '1. RFQ Received', color: 'border-blue-300 bg-blue-50/40' },
+    { id: 'Draft', title: '2. Draft (Rep)', color: 'border-slate-300 bg-slate-100/50' },
+    { id: 'Pending Customer Approval', title: '3. Customer Review', color: 'border-purple-300 bg-purple-50/40' },
+    { id: 'Under Negotiation', title: '4. Counter / Negotiation', color: 'border-cyan-300 bg-cyan-50/50' },
+    { id: 'Pending Manager Approval', title: '5. Manager Review', color: 'border-amber-300 bg-amber-50/50' },
+    { id: 'Pending Finance Approval', title: '6. Finance Review', color: 'border-rose-300 bg-rose-50/50' },
+    { id: 'Approved', title: '7. Approved / Confirmed', color: 'border-emerald-300 bg-emerald-50/50' }
   ];
 
   const getStatusBadge = (st) => {
-    if (st === 'Approved' || st === 'Confirmed') return <Badge variant="success">{st}</Badge>;
-    if (st === 'Pending Approval') return <Badge variant="pending">Pending Approval</Badge>;
-    if (st === 'Negotiation') return <Badge variant="negotiation">Negotiation</Badge>;
+    if (st === 'Approved' || st === 'Confirmed') return <Badge variant="success">Approved</Badge>;
+    if (st === 'Pending Customer Approval') return <Badge variant="purple">Customer Review</Badge>;
+    if (st === 'Under Negotiation' || st === 'Negotiation') return <Badge variant="negotiation">Under Negotiation</Badge>;
+    if (st === 'Pending Manager Approval') return <Badge variant="pending">Manager Review</Badge>;
+    if (st === 'Pending Finance Approval') return <Badge variant="danger">Finance Review</Badge>;
+    if (st === 'RFQ Received') return <Badge variant="brand">RFQ Received</Badge>;
     return <Badge variant="draft">Draft</Badge>;
   };
 

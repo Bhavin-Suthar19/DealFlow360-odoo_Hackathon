@@ -114,6 +114,22 @@ export const QuotationBuilderView = ({
   const overageLines = lines.filter((l) => l.discount_pct > l.discount_limit_pct);
   const totalAmount = lines.reduce((sum, l) => sum + l.qty * l.unit_price * (1 - l.discount_pct / 100), 0);
 
+  const handleSendToCustomerClick = () => {
+    if (onSendToCustomer) {
+      onSendToCustomer(lines);
+    } else {
+      onSubmitQuote(lines);
+    }
+  };
+
+  const handleEscalateClick = () => {
+    if (onEscalateToManager) {
+      onEscalateToManager(lines);
+    } else {
+      onSubmitQuote(lines);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Bar */}
@@ -142,8 +158,16 @@ export const QuotationBuilderView = ({
           <Button variant="secondary" icon={Save} onClick={() => onSaveDraft(lines)}>
             Save Draft
           </Button>
-          <Button variant="primary" icon={Send} onClick={() => onSubmitQuote(lines)}>
-            Submit for Approval
+          <Button variant="outline" icon={Send} onClick={handleSendToCustomerClick}>
+            Send to Customer
+          </Button>
+          {overageLines.length > 0 && (
+            <Button variant="danger" icon={AlertTriangle} onClick={handleEscalateClick}>
+              Escalate to Manager
+            </Button>
+          )}
+          <Button variant="primary" icon={CheckCircle2} onClick={() => onSubmitQuote(lines)}>
+            Submit & Confirm
           </Button>
         </div>
       </div>

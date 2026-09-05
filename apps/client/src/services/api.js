@@ -47,17 +47,28 @@ export const api = {
   auth: {
     login: (credentials) => request('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
     signup: (userData) => request('/auth/signup', { method: 'POST', body: JSON.stringify(userData) }),
+    refresh: () => request('/auth/refresh', { method: 'POST' }),
     portalLogin: (credentials) => request('/auth/portal/login', { method: 'POST', body: JSON.stringify(credentials) }),
     logout: () => request('/auth/logout', { method: 'POST' })
+  },
+  users: {
+    provision: (userData) => request('/users/provision', { method: 'POST', body: JSON.stringify(userData) }),
+    getAll: () => request('/users')
   },
   quotations: {
     getAll: (params = '') => request(`/quotations${params ? `?${params}` : ''}`),
     getById: (id) => request(`/quotations/${id}`),
     create: (data) => request('/quotations', { method: 'POST', body: JSON.stringify(data) }),
+    createRFQ: (data) => request('/quotations/rfq', { method: 'POST', body: JSON.stringify(data) }),
+    getRFQs: () => request('/quotations/rfq'),
     addLine: (id, lineData) => request(`/quotations/${id}/lines`, { method: 'POST', body: JSON.stringify(lineData) }),
     updateLine: (id, lineId, lineData) => request(`/quotations/${id}/lines/${lineId}`, { method: 'PATCH', body: JSON.stringify(lineData) }),
     deleteLine: (id, lineId) => request(`/quotations/${id}/lines/${lineId}`, { method: 'DELETE' }),
-    submit: (id) => request(`/quotations/${id}/submit`, { method: 'POST' })
+    sendToCustomer: (id) => request(`/quotations/${id}/send-to-customer`, { method: 'POST' }),
+    escalate: (id, note) => request(`/quotations/${id}/escalate`, { method: 'POST', body: JSON.stringify({ note }) }),
+    submit: (id) => request(`/quotations/${id}/submit`, { method: 'POST' }),
+    portalNegotiate: (id, data) => request(`/negotiation/quotations/${id}/negotiate`, { method: 'POST', body: JSON.stringify(data) }),
+    portalConfirm: (id) => request(`/negotiation/quotations/${id}/confirm`, { method: 'POST' })
   },
   approvals: {
     getAll: (params = '') => request(`/approvals${params ? `?${params}` : ''}`),
