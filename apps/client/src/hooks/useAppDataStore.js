@@ -101,6 +101,8 @@ export const useAppDataStore = (navigation) => {
   const [subscriptions, setSubscriptions] = useState(mockSubscriptions);
   const [invoices, setInvoices] = useState(mockInvoices);
   const [alerts, setAlerts] = useState(mockDealHealthAlerts);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [discountTiers, setDiscountTiers] = useState(mockDiscountTiers);
   const [categoryCeilings, setCategoryCeilings] = useState(mockCategoryDiscountCeilings);
 
@@ -139,6 +141,8 @@ export const useAppDataStore = (navigation) => {
         foRes,
         subRes,
         altRes,
+        auditRes,
+        notifRes,
         catRes,
         varRes,
         plRes,
@@ -154,6 +158,8 @@ export const useAppDataStore = (navigation) => {
         api.fulfillment ? api.fulfillment.getAll() : Promise.reject(),
         api.subscriptions ? api.subscriptions.getAll() : Promise.reject(),
         api.dealHealth ? api.dealHealth.getAlerts() : Promise.reject(),
+        api.audit ? api.audit.getLogs('limit=50') : api.getAuditLogs('limit=50'),
+        api.notifications ? api.notifications.getAll('limit=50') : api.getNotifications('limit=50'),
         api.products ? api.products.getCategories() : Promise.reject(),
         api.products ? api.products.getVariants() : Promise.reject(),
         api.priceLists ? api.priceLists.getAll() : Promise.reject(),
@@ -185,8 +191,14 @@ export const useAppDataStore = (navigation) => {
       if (subRes.status === 'fulfilled' && Array.isArray(subRes.value?.data) && subRes.value.data.length > 0) {
         setSubscriptions(subRes.value.data);
       }
-      if (altRes.status === 'fulfilled' && Array.isArray(altRes.value?.data) && altRes.value.data.length > 0) {
+      if (altRes.status === 'fulfilled' && Array.isArray(altRes.value?.data)) {
         setAlerts(altRes.value.data);
+      }
+      if (auditRes.status === 'fulfilled' && Array.isArray(auditRes.value?.data)) {
+        setAuditLogs(auditRes.value.data);
+      }
+      if (notifRes.status === 'fulfilled' && Array.isArray(notifRes.value?.data)) {
+        setNotifications(notifRes.value.data);
       }
       if (catRes.status === 'fulfilled' && Array.isArray(catRes.value?.data) && catRes.value.data.length > 0) {
         setCategories(catRes.value.data);
@@ -1031,6 +1043,10 @@ export const useAppDataStore = (navigation) => {
     setInvoices,
     alerts,
     setAlerts,
+    auditLogs,
+    setAuditLogs,
+    notifications,
+    setNotifications,
     discountTiers,
     setDiscountTiers,
     categoryCeilings,
