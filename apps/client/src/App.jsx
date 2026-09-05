@@ -21,6 +21,9 @@ import DiscountTiersSetupView from './views/DiscountTiersSetupView';
 import MessagesView from './views/MessagesView';
 import UserProfileView from './views/UserProfileView';
 import { useModal } from './context/ModalContext';
+import { useLogoutMutation } from './features/auth/authApi';
+import { useDispatch } from 'react-redux';
+import { clearAuth } from './features/auth/authSlice';
 import api from './services/api';
 
 import {
@@ -45,6 +48,33 @@ import {
 
 export function App() {
   const { showAlert, showConfirm } = useModal();
+  const dispatch = useDispatch();
+  const [logout] = useLogoutMutation();
+
+  const handleLogout = async () => {
+    try {
+      await logout().unwrap();
+    } catch (e) {
+      console.warn('Logout request failed', e);
+    } finally {
+      dispatch(clearAuth());
+      setCurrentUser(null);
+      setCurrentView('login');
+    }
+  };
+
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('df360_theme') || 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem('df360_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
 
   const [currentView, setCurrentView] = useState('login'); // 'login' | 'portal' | 'dashboard' | ...
   const [currentUser, setCurrentUser] = useState(mockUsers[0]);
