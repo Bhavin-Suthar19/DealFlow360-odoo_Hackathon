@@ -4,7 +4,7 @@ import { z } from 'zod';
 dotenv.config();
 
 const envSchema = z.object({
-  PORT: z.string().default('5000'),
+  PORT: z.string().default('5001'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   MONGO_URI: z.string({ required_error: 'MONGO_URI is required' }),
   REDIS_URL: z.string({ required_error: 'REDIS_URL is required' }),
