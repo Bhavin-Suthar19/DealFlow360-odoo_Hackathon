@@ -3,33 +3,79 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
-import { ArrowLeft, Save, Plus } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, Tag, Layers, Check } from 'lucide-react';
 
-export const ProductPricelistConfigView = ({ product, categories = [], onBack, onSaveProduct }) => {
-  const initialCategory = product ? (typeof product.category_id === 'object' ? product.category_id?._id : product.category_id) : (categories[0]?._id || categories[0]?.id || 'cat-1');
+export const ProductPricelistConfigView = ({
+  product,
+  categories = [],
+  variants = [],
+  onBack,
+  onSaveProduct,
+  onAddVariant,
+  onDeleteVariant
+}) => {
+  const prodId = product?._id || product?.id;
+  const initialCategory = product
+    ? (typeof product.category_id === 'object' ? product.category_id?._id : product.category_id)
+    : (categories[0]?._id || categories[0]?.id || 'cat-1');
+
   const [name, setName] = useState(product ? product.name : '');
   const [categoryId, setCategoryId] = useState(initialCategory || 'cat-1');
   const [unit, setUnit] = useState(product ? product.unit : 'unit');
-  const [basePrice, setBasePrice] = useState(product ? product.base_price : 1000);
+  const [basePrice, setBasePrice] = useState(product ? (product.base_price ?? product.price ?? 1000) : 1000);
   const [taxPct, setTaxPct] = useState(product ? product.tax_pct : 8.5);
-  const [isSubscription, setIsSubscription] = useState(product ? product.is_subscription : false);
+  const [stockOnHand, setStockOnHand] = useState(product ? (product.stock_on_hand ?? 50) : 50);
+  const [isSubscription, setIsSubscription] = useState(product ? !!product.is_subscription : false);
   const [recurringCycle, setRecurringCycle] = useState(product ? product.recurring_cycle || 'monthly' : 'monthly');
   const [description, setDescription] = useState(product ? product.description : '');
+
+  // Dynamic Product Variants from DB
+  const productVariants = variants.filter(
+    (v) => (v.product_id?._id || v.product_id) === prodId
+  );
+
+  const [isAddingVariant, setIsAddingVariant] = useState(false);
+  const [newAttrName, setNewAttrName] = useState('');
+  const [newAttrVal, setNewAttrVal] = useState('');
+  const [newExtraPrice, setNewExtraPrice] = useState(0);
+  const [isSavingVariant, setIsSavingVariant] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSaveProduct({
-      _id: product?._id,
-      id: product?._id || product?.id,
+      _id: prodId,
+      id: prodId,
       name,
       category_id: categoryId,
       unit,
-      base_price: Number(basePrice),
-      tax_pct: Number(taxPct),
+      base_price: Number(basePrice) || 0,
+      tax_pct: Number(taxPct) || 0,
+      stock_on_hand: Number(stockOnHand) || 0,
       is_subscription: isSubscription,
       recurring_cycle: isSubscription ? recurringCycle : null,
       description
     });
+  };
+
+  const handleCreateVariant = async (e) => {
+    e.preventDefault();
+    if (!newAttrName.trim() || !newAttrVal.trim() || !prodId) return;
+    setIsSavingVariant(true);
+    try {
+      if (onAddVariant) {
+        await onAddVariant(prodId, {
+          attribute_name: newAttrName.trim(),
+          attribute_value: newAttrVal.trim(),
+          extra_price: Number(newExtraPrice) || 0
+        });
+      }
+      setNewAttrName('');
+      setNewAttrVal('');
+      setNewExtraPrice(0);
+      setIsAddingVariant(false);
+    } finally {
+      setIsSavingVariant(false);
+    }
   };
 
   return (
@@ -45,7 +91,7 @@ export const ProductPricelistConfigView = ({ product, categories = [], onBack, o
               {product ? `Configure: ${product.name}` : 'Create New Product Master'}
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Set product attributes, recurring engine parameters & variants
+              Live Database Integration: Master pricing, stock attributes & variant matrix
             </p>
           </div>
         </div>
@@ -58,7 +104,7 @@ export const ProductPricelistConfigView = ({ product, categories = [], onBack, o
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form Card */}
-        <Card title="Product Master Details" className="lg:col-span-2">
+        <Card title="Product Master Details" subtitle="Connected to MongoDB Products collection" className="lg:col-span-2">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input label="Product Name" value={name} onChange={(e) => setName(e.target.value)} required />
 
@@ -81,12 +127,19 @@ export const ProductPricelistConfigView = ({ product, categories = [], onBack, o
               <Input label="Unit of Measure" value={unit} onChange={(e) => setUnit(e.target.value)} required />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Input
                 label="Base List Price ($)"
                 type="number"
                 value={basePrice}
                 onChange={(e) => setBasePrice(e.target.value)}
+                required
+              />
+              <Input
+                label="Available Stock"
+                type="number"
+                value={stockOnHand}
+                onChange={(e) => setStockOnHand(e.target.value)}
                 required
               />
               <Input label="Tax Rate (%)" type="number" value={taxPct} onChange={(e) => setTaxPct(e.target.value)} required />
@@ -143,31 +196,100 @@ export const ProductPricelistConfigView = ({ product, categories = [], onBack, o
           </form>
         </Card>
 
-        {/* Variant Setup Card */}
+        {/* Dynamic Database Variant Setup Card */}
         <div className="space-y-4">
-          <Card title="Product Attribute Variants" subtitle="Multi-attribute price adjustment matrix">
+          <Card
+            title="Product Attribute Variants"
+            subtitle={`${productVariants.length} dynamic variants in database`}
+          >
             <div className="space-y-3">
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold text-slate-900 block">RAM: 128GB ECC</span>
-                  <span className="text-[10px] text-slate-500">Attribute Variant</span>
+              {productVariants.length === 0 ? (
+                <div className="text-center py-6 text-slate-400">
+                  <Layers className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                  <p className="text-xs italic">No attribute variants configured for this product yet.</p>
                 </div>
-                <Badge variant="success">+$1,200</Badge>
-              </div>
+              ) : (
+                productVariants.map((v) => {
+                  const varId = v._id || v.id;
+                  return (
+                    <div
+                      key={varId}
+                      className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between hover:bg-slate-100 transition-colors"
+                    >
+                      <div>
+                        <span className="text-xs font-bold text-slate-900 block">
+                          {v.attribute_name}: {v.attribute_value}
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-mono">DB ID: {varId}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={v.extra_price > 0 ? 'success' : 'default'}>
+                          {v.extra_price > 0 ? `+$${v.extra_price.toLocaleString()}` : '$0 (Standard)'}
+                        </Badge>
+                        {onDeleteVariant && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteVariant(varId)}
+                            className="p-1 text-slate-400 hover:text-rose-600 transition-colors rounded"
+                            title="Delete variant"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
 
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold text-slate-900 block">RAM: 256GB ECC</span>
-                  <span className="text-[10px] text-slate-500">Attribute Variant</span>
+            {/* Add Variant Form */}
+            {isAddingVariant ? (
+              <form onSubmit={handleCreateVariant} className="mt-4 p-3 bg-purple-50/50 border border-[#714B67]/20 rounded-xl space-y-3">
+                <span className="text-xs font-bold text-[#714B67] block">Add Database Attribute Variant</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    placeholder="e.g. RAM, Color"
+                    value={newAttrName}
+                    onChange={(e) => setNewAttrName(e.target.value)}
+                    required
+                  />
+                  <Input
+                    placeholder="e.g. 128GB ECC"
+                    value={newAttrVal}
+                    onChange={(e) => setNewAttrVal(e.target.value)}
+                    required
+                  />
                 </div>
-                <Badge variant="success">+$2,400</Badge>
+                <Input
+                  label="Extra Price ($)"
+                  type="number"
+                  value={newExtraPrice}
+                  onChange={(e) => setNewExtraPrice(e.target.value)}
+                />
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <Button size="sm" variant="ghost" onClick={() => setIsAddingVariant(false)}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" variant="primary" icon={Check} disabled={isSavingVariant}>
+                    {isSavingVariant ? 'Saving...' : 'Save to DB'}
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="mt-4 pt-3 border-t border-slate-200">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  icon={Plus}
+                  className="w-full"
+                  onClick={() => setIsAddingVariant(true)}
+                  disabled={!prodId}
+                >
+                  {prodId ? 'Add Attribute Variant' : 'Save Product First to Add Variants'}
+                </Button>
               </div>
-            </div>
-            <div className="mt-4 pt-3 border-t border-slate-200">
-              <Button size="sm" variant="outline" icon={Plus} className="w-full">
-                Add Attribute Variant
-              </Button>
-            </div>
+            )}
           </Card>
         </div>
       </div>

@@ -2,12 +2,30 @@ import React, { useState } from 'react';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
+import Pagination from '../components/ui/Pagination';
+import usePagination from '../hooks/usePagination';
 import { ArrowRight, Filter } from 'lucide-react';
 
 export const ApprovalsListView = ({ approvals = [], onSelectApproval }) => {
   const [filterStatus, setFilterStatus] = useState('Pending');
 
   const filteredApprovals = filterStatus === 'All' ? approvals : approvals.filter((a) => a.status === filterStatus);
+
+  const {
+    currentPage,
+    pageSize,
+    totalPages,
+    totalItems,
+    paginatedItems: paginatedApprovals,
+    onPageChange,
+    onPageSizeChange,
+    resetPage
+  } = usePagination(filteredApprovals, 10);
+
+  const handleFilterChange = (status) => {
+    setFilterStatus(status);
+    resetPage();
+  };
 
   return (
     <div className="space-y-6">
@@ -25,7 +43,7 @@ export const ApprovalsListView = ({ approvals = [], onSelectApproval }) => {
         {['Pending', 'Returned', 'Approved', 'Rejected', 'All'].map((status) => (
           <button
             key={status}
-            onClick={() => setFilterStatus(status)}
+            onClick={() => handleFilterChange(status)}
             className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               filterStatus === status
                 ? 'bg-[#714B67] text-white shadow-xs'
@@ -54,15 +72,15 @@ export const ApprovalsListView = ({ approvals = [], onSelectApproval }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredApprovals.length === 0 ? (
+              {paginatedApprovals.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-500 italic">
                     No approval records matching status '{filterStatus}'
                   </td>
                 </tr>
               ) : (
-                filteredApprovals.map((app) => (
-                  <tr key={app.id} className="hover:bg-slate-50 transition-colors">
+                paginatedApprovals.map((app) => (
+                  <tr key={app.id || app._id} className="hover:bg-slate-50 transition-colors">
                     <td className="py-3.5 px-4 font-bold text-[#714B67]">{app.quote_number}</td>
                     <td className="py-3.5 px-4 font-semibold text-slate-900">{app.customer_name}</td>
                     <td className="py-3.5 px-4">
@@ -81,7 +99,7 @@ export const ApprovalsListView = ({ approvals = [], onSelectApproval }) => {
                       </Badge>
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <Button size="sm" variant="primary" icon={ArrowRight} onClick={() => onSelectApproval(app.id)}>
+                      <Button size="sm" variant="primary" icon={ArrowRight} onClick={() => onSelectApproval(app.id || app._id)}>
                         Review Deal
                       </Button>
                     </td>
@@ -91,6 +109,16 @@ export const ApprovalsListView = ({ approvals = [], onSelectApproval }) => {
             </tbody>
           </table>
         </div>
+
+        {/* Universal Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
       </Card>
     </div>
   );

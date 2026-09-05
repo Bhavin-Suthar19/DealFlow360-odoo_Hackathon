@@ -3,12 +3,30 @@ import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Tabs from '../components/ui/Tabs';
+import Pagination from '../components/ui/Pagination';
+import usePagination from '../hooks/usePagination';
 import { ArrowRight } from 'lucide-react';
 
 export const InvoicesListView = ({ invoices = [], onSelectInvoice }) => {
   const [activeTab, setActiveTab] = useState('All');
 
   const filteredInvoices = activeTab === 'All' ? invoices : invoices.filter((i) => i.status === activeTab);
+
+  const {
+    currentPage,
+    pageSize,
+    totalPages,
+    totalItems,
+    paginatedItems: paginatedInvoices,
+    onPageChange,
+    onPageSizeChange,
+    resetPage
+  } = usePagination(filteredInvoices, 10);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    resetPage();
+  };
 
   return (
     <div className="space-y-6">
@@ -28,7 +46,7 @@ export const InvoicesListView = ({ invoices = [], onSelectInvoice }) => {
           { id: 'Paid', label: 'Paid', badge: invoices.filter((i) => i.status === 'Paid').length }
         ]}
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
       />
 
       {/* Invoice Table */}
@@ -48,34 +66,53 @@ export const InvoicesListView = ({ invoices = [], onSelectInvoice }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {filteredInvoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-slate-50">
-                  <td className="py-3.5 px-4 font-bold text-[#714B67] font-mono">{inv.invoice_number}</td>
-                  <td className="py-3.5 px-4 text-slate-500">{inv.quote_number}</td>
-                  <td className="py-3.5 px-4 font-medium text-slate-900">{inv.customer_name}</td>
-                  <td className="py-3.5 px-4 text-slate-600">{inv.due_date}</td>
-                  <td className="py-3.5 px-4">
-                    <Badge variant="cyan">{inv.payment_stage}</Badge>
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-extrabold text-slate-900">
-                    ${inv.amount?.toLocaleString()}
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <Badge variant={inv.status === 'Paid' ? 'success' : 'danger'}>{inv.status}</Badge>
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <Button size="sm" variant="ghost" icon={ArrowRight} onClick={() => onSelectInvoice(inv.id)}>
-                      Open Detail
-                    </Button>
+              {paginatedInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-slate-500 italic">
+                    No invoices found in this view.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                paginatedInvoices.map((inv) => (
+                  <tr key={inv.id || inv._id} className="hover:bg-slate-50">
+                    <td className="py-3.5 px-4 font-bold text-[#714B67] font-mono">{inv.invoice_number}</td>
+                    <td className="py-3.5 px-4 text-slate-500">{inv.quote_number}</td>
+                    <td className="py-3.5 px-4 font-medium text-slate-900">{inv.customer_name}</td>
+                    <td className="py-3.5 px-4 text-slate-600">{inv.due_date}</td>
+                    <td className="py-3.5 px-4">
+                      <Badge variant="cyan">{inv.payment_stage}</Badge>
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-extrabold text-slate-900">
+                      ${inv.amount?.toLocaleString()}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <Badge variant={inv.status === 'Paid' ? 'success' : 'danger'}>{inv.status}</Badge>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <Button size="sm" variant="ghost" icon={ArrowRight} onClick={() => onSelectInvoice(inv.id || inv._id)}>
+                        Open Detail
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Universal Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
       </Card>
     </div>
   );
 };
 
 export default InvoicesListView;
+

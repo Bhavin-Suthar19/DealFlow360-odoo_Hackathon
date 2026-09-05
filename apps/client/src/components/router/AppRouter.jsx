@@ -15,17 +15,7 @@ import ReportingDashboardView from '../../views/ReportingDashboardView';
 import ProductCatalogView from '../../views/ProductCatalogView';
 import ProductPricelistConfigView from '../../views/ProductPricelistConfigView';
 import DiscountTiersSetupView from '../../views/DiscountTiersSetupView';
-import MessagesView from '../../views/MessagesView';
 import UserProfileView from '../../views/UserProfileView';
-import {
-  mockCategories,
-  mockVariants,
-  mockPriceLists,
-  mockApprovalRules,
-  mockWarehouses,
-  mockStock,
-  mockUpsellRules
-} from '../../data/mockData';
 import { useModal } from '../../context/ModalContext';
 
 export const AppRouter = ({ navigation, dataStore }) => {
@@ -51,8 +41,10 @@ export const AppRouter = ({ navigation, dataStore }) => {
     setDiscountTiers,
     categoryCeilings,
     setCategoryCeilings,
+    upsellRules,
     activeQuote,
     activeApproval,
+    linkedApprovalQuote,
     activeFulfillmentOrder,
     activeSubscription,
     activeInvoice,
@@ -60,6 +52,7 @@ export const AppRouter = ({ navigation, dataStore }) => {
     handleCreateQuotation,
     handleSaveDraft,
     handleSubmitQuote,
+    handleEscalateToManager,
     handleApprove,
     handleReturn,
     handleReject,
@@ -71,7 +64,10 @@ export const AppRouter = ({ navigation, dataStore }) => {
     handleEscalateAlert,
     handleRecalculateAlerts,
     handleSaveProduct,
-    handleSaveDiscountConfig
+    handleAddVariant,
+    handleDeleteVariant,
+    handleSaveDiscountConfig,
+    customers
   } = dataStore;
 
   switch (currentView) {
@@ -84,6 +80,14 @@ export const AppRouter = ({ navigation, dataStore }) => {
           currentUser={currentUser}
           onNavigate={(view, id) => {
             if (view === 'quotation-builder') {
+              if (currentUser?.role && currentUser.role !== 'sales_rep') {
+                showAlert({
+                  title: 'Access Restricted',
+                  message: 'New quotations can only be created by Sales Representatives.',
+                  variant: 'warning'
+                });
+                return;
+              }
               handleCreateQuotation();
             } else {
               navigateTo(view, id);
@@ -96,8 +100,9 @@ export const AppRouter = ({ navigation, dataStore }) => {
       return (
         <QuotationsKanbanView
           quotations={quotations}
+          currentUser={currentUser}
           onSelectQuote={(id) => navigateTo('quotation-detail', id)}
-          onCreateQuote={handleCreateQuotation}
+          onCreateQuote={currentUser?.role === 'sales_rep' ? handleCreateQuotation : undefined}
         />
       );
 
@@ -106,7 +111,8 @@ export const AppRouter = ({ navigation, dataStore }) => {
         <QuotationBuilderView
           quote={activeQuote}
           products={products}
-          upsellRules={mockUpsellRules}
+          customers={customers}
+          upsellRules={upsellRules || []}
           onBack={() => navigateTo('quotations')}
           onSubmitQuote={handleSubmitQuote}
           onSaveDraft={handleSaveDraft}
@@ -135,9 +141,7 @@ export const AppRouter = ({ navigation, dataStore }) => {
             });
             navigateTo('quotations');
           }}
-          onEscalateToManager={(updatedLines) => {
-            handleSubmitQuote(updatedLines);
-          }}
+          onEscalateToManager={handleEscalateToManager}
         />
       );
 
@@ -153,6 +157,8 @@ export const AppRouter = ({ navigation, dataStore }) => {
       return (
         <ApprovalAuditDetailView
           approval={activeApproval}
+          quote={linkedApprovalQuote}
+          currentUser={currentUser}
           onBack={() => navigateTo('approvals')}
           onApprove={handleApprove}
           onReturn={handleReturn}
@@ -218,6 +224,7 @@ export const AppRouter = ({ navigation, dataStore }) => {
       return (
         <DealHealthDashboardView
           alerts={alerts}
+          quotations={quotations}
           onNudge={handleNudgeAlert}
           onEscalate={handleEscalateAlert}
           onRecalculate={handleRecalculateAlerts}
@@ -245,6 +252,7 @@ export const AppRouter = ({ navigation, dataStore }) => {
       return (
         <ProductCatalogView
           products={products}
+          categories={categories}
           variants={variants}
           priceLists={priceLists}
           onSelectProduct={(id) => navigateTo('product-config', id)}
@@ -260,8 +268,11 @@ export const AppRouter = ({ navigation, dataStore }) => {
         <ProductPricelistConfigView
           product={activeProduct}
           categories={categories}
+          variants={variants}
           onBack={() => navigateTo('products')}
           onSaveProduct={handleSaveProduct}
+          onAddVariant={handleAddVariant}
+          onDeleteVariant={handleDeleteVariant}
         />
       );
 
@@ -270,13 +281,10 @@ export const AppRouter = ({ navigation, dataStore }) => {
         <DiscountTiersSetupView
           discountTiers={discountTiers}
           categoryCeilings={categoryCeilings}
-          approvalRules={mockApprovalRules}
+          approvalRules={[]}
           onSaveConfig={handleSaveDiscountConfig}
         />
       );
-
-    case 'messages':
-      return <MessagesView currentUser={currentUser} />;
 
     case 'profile':
       return <UserProfileView currentUser={currentUser} />;

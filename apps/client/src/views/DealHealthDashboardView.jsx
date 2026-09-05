@@ -2,9 +2,9 @@ import React from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
-import { ShieldAlert, Clock, AlertTriangle, Send, Bell, RefreshCw } from 'lucide-react';
+import { ShieldAlert, Clock, AlertTriangle, Send, Bell, RefreshCw, ShieldCheck } from 'lucide-react';
 
-export const DealHealthDashboardView = ({ alerts = [], onEscalate, onNudge, onRecalculate }) => {
+export const DealHealthDashboardView = ({ alerts = [], quotations = [], onEscalate, onNudge, onRecalculate }) => {
   const stalledCount = alerts.filter((a) => a.alert_type === 'Stalled Deal').length;
   const anomalyCount = alerts.filter((a) => a.alert_type === 'Discount Anomaly').length;
 
@@ -85,6 +85,18 @@ export const DealHealthDashboardView = ({ alerts = [], onEscalate, onNudge, onRe
                 const customerName = al.customer_name || al.quotation_id?.customer_name || 'Enterprise Customer';
                 const detail = al.detail || al.details || 'Anomaly detected in deal velocity or margin structure.';
                 const dateStr = al.flagged_at || al.createdAt ? new Date(al.flagged_at || al.createdAt).toLocaleDateString() : 'Active';
+
+                const linkedQuote = quotations.find(
+                  (q) =>
+                    q._id === al.quotation_id ||
+                    q.id === al.quotation_id ||
+                    (q.quote_number && q.quote_number === quoteNumber)
+                );
+                const quoteStatus = linkedQuote?.status || (typeof al.quotation_id === 'object' ? al.quotation_id?.status : null);
+                const isEscalated =
+                  al.status === 'Escalated' ||
+                  ['Pending Manager Approval', 'Pending Finance Approval', 'Approved', 'Confirmed'].includes(quoteStatus);
+
                 return (
                   <tr key={alertId} className="hover:bg-slate-50">
                     <td className="py-3.5 px-4 font-bold text-[#714B67]">{quoteNumber}</td>
@@ -97,19 +109,25 @@ export const DealHealthDashboardView = ({ alerts = [], onEscalate, onNudge, onRe
                     <td className="py-3.5 px-4 text-xs text-slate-600 max-w-xs">{detail}</td>
                     <td className="py-3.5 px-4 text-xs text-slate-500">{dateStr}</td>
                     <td className="py-3.5 px-4">
-                      <Badge variant={al.status === 'Escalated' ? 'danger' : al.status === 'Nudged' ? 'purple' : 'default'}>
-                        {al.status}
+                      <Badge variant={al.status === 'Escalated' || isEscalated ? 'danger' : al.status === 'Nudged' ? 'purple' : 'default'}>
+                        {isEscalated ? 'Escalated' : al.status}
                       </Badge>
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button size="sm" variant="warning" icon={Bell} onClick={() => onNudge(alertId)}>
-                          Nudge Rep
-                        </Button>
-                        <Button size="sm" variant="danger" icon={Send} onClick={() => onEscalate(alertId)}>
-                          Escalate
-                        </Button>
-                      </div>
+                      {isEscalated ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1 rounded-full">
+                          <ShieldCheck className="w-3.5 h-3.5 text-rose-600" /> Escalated to Leadership
+                        </span>
+                      ) : (
+                        <div className="flex items-center justify-end gap-2">
+                          <Button size="sm" variant="warning" icon={Bell} onClick={() => onNudge(alertId)}>
+                            Nudge Rep
+                          </Button>
+                          <Button size="sm" variant="danger" icon={Send} onClick={() => onEscalate(alertId)}>
+                            Escalate
+                          </Button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );

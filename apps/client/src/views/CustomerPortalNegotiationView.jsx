@@ -4,7 +4,6 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Input from '../components/ui/Input';
 import CustomerPortalNavbar from '../components/layout/CustomerPortalNavbar';
-import MessagesView from './MessagesView';
 import UserProfileView from './UserProfileView';
 import {
   ShieldAlert,
@@ -279,9 +278,7 @@ export const CustomerPortalNegotiationView = ({
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 flex-1 w-full">
-        {activePortalTab === 'messages' ? (
-          <MessagesView currentUser={customerUser} />
-        ) : activePortalTab === 'profile' ? (
+        {activePortalTab === 'profile' ? (
           <UserProfileView currentUser={customerUser} />
         ) : activePortalTab === 'rfq' ? (
           <div className="space-y-6">

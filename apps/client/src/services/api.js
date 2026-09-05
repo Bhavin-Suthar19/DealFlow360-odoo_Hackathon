@@ -101,16 +101,24 @@ export const api = {
   billing: {
     getInvoices: () => request('/billing/invoices'),
     getInvoiceById: (id) => request(`/billing/invoices/${id}`),
+    generateInvoice: (quotationId) => request('/billing/invoices/generate', { method: 'POST', body: JSON.stringify({ quotation_id: quotationId }) }),
     recordPayment: (id, paymentData) => request(`/billing/invoices/${id}/payments`, { method: 'POST', body: JSON.stringify(paymentData) })
   },
   products: {
-    getAll: () => request('/products'),
+    getAll: (params = '') => request(`/products${params ? `?${params}` : ''}`),
     getCategories: () => request('/products/categories'),
     getVariants: () => request('/products/variants'),
     getById: (id) => request(`/products/${id}`),
     create: (data) => request('/products', { method: 'POST', body: JSON.stringify(data) }),
     update: (id, data) => request(`/products/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-    delete: (id) => request(`/products/${id}`, { method: 'DELETE' })
+    delete: (id) => request(`/products/${id}`, { method: 'DELETE' }),
+    addVariant: (id, data) => request(`/products/${id}/variants`, { method: 'POST', body: JSON.stringify(data) }),
+    updateVariant: (variantId, data) => request(`/products/variants/${variantId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    deleteVariant: (variantId) => request(`/products/variants/${variantId}`, { method: 'DELETE' })
+  },
+  customers: {
+    getAll: () => request('/customers'),
+    getById: (id) => request(`/customers/${id}`)
   },
   priceLists: {
     getAll: () => request('/price-lists'),
@@ -130,6 +138,11 @@ export const api = {
     escalate: (id, detail) => request(`/deal-health/alerts/${id}/escalate`, { method: 'POST', body: JSON.stringify({ detail }) }),
     nudge: (id, detail) => request(`/deal-health/alerts/${id}/nudge`, { method: 'POST', body: JSON.stringify({ detail }) }),
     recalculate: () => request('/deal-health/recalculate', { method: 'POST' })
+  },
+  upsell: {
+    getRules: () => request('/upsell/rules'),
+    getSuggestions: (productId) => request(`/upsell/suggestions/${productId}`),
+    createRule: (data) => request('/upsell/rules', { method: 'POST', body: JSON.stringify(data) })
   },
   reports: {
     getSummary: (params = '') => request(`/reports/quotations${params ? `?${params}` : ''}`),

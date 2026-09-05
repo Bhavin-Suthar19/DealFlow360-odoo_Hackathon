@@ -13,7 +13,6 @@ import {
   LogOut,
   UserCheck,
   Building2,
-  MessageSquare,
   User
 } from 'lucide-react';
 
@@ -32,7 +31,6 @@ export const MainNavbar = ({
     { id: 'subscriptions', label: 'Subscriptions', icon: Repeat, roles: ['finance_ops', 'admin'] },
     { id: 'invoices', label: 'Invoices', icon: CreditCard, roles: ['finance_ops', 'admin'] },
     { id: 'deal-health', label: 'Deal Health', icon: ShieldAlert, alert: true, roles: ['sales_manager', 'admin'] },
-    { id: 'messages', label: 'Messages', icon: MessageSquare, badge: 3, roles: ['sales_rep', 'sales_manager', 'finance_ops', 'admin'] },
     { id: 'reports', label: 'Reports', icon: BarChart3, roles: ['sales_rep', 'sales_manager', 'finance_ops', 'admin'] },
     { id: 'products', label: 'Products', icon: Package, roles: ['sales_rep', 'sales_manager', 'admin'] },
     { id: 'config', label: 'Discount Config', icon: Sliders, roles: ['sales_manager', 'finance_ops', 'admin'] }

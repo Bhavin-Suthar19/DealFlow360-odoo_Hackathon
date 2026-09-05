@@ -18,7 +18,6 @@ import {
   Sliders,
   Globe,
   ArrowUpRight,
-  MessageSquare,
   UserCheck
 } from 'lucide-react';
 
@@ -30,7 +29,7 @@ export const DashboardView = ({ quotations = [], approvals = [], alerts = [], cu
   const atRiskDealsCount = alerts.filter((al) => al.status === 'Open').length;
   const totalPipelineValue = quotations.reduce((sum, q) => sum + (q.total_amount || 0), 0);
 
-  // Odoo-Style 10-App Switcher Grid Data
+  // Odoo-Style App Switcher Grid Data
   const appModules = [
     {
       id: 'quotations',
@@ -87,15 +86,6 @@ export const DashboardView = ({ quotations = [], approvals = [], alerts = [], cu
       roles: ['sales_manager', 'admin']
     },
     {
-      id: 'messages',
-      name: 'Messages & Chat',
-      desc: 'Team chat & buyer negotiation',
-      icon: MessageSquare,
-      badge: '3 Unread',
-      bgColor: 'bg-purple-50 border-purple-200 text-purple-700',
-      roles: ['sales_rep', 'sales_manager', 'finance_ops', 'admin']
-    },
-    {
       id: 'reports',
       name: 'Executive Analytics',
       desc: 'Sales performance & compliance',
@@ -147,7 +137,7 @@ export const DashboardView = ({ quotations = [], approvals = [], alerts = [], cu
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {(role === 'sales_rep' || role === 'admin') && (
+          {role === 'sales_rep' && (
             <Button variant="primary" icon={Plus} onClick={() => onNavigate('quotation-builder')}>
               New Quotation
             </Button>
@@ -252,52 +242,98 @@ export const DashboardView = ({ quotations = [], approvals = [], alerts = [], cu
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Active Pipeline Table */}
+        {/* Role-Specific Main Table */}
         <Card
-          title={role === 'sales_manager' ? 'Discount Risk Approvals Queue' : 'Active Quotations Pipeline'}
-          subtitle="Real-time status tracking & risk score engine"
+          title={role === 'sales_manager' ? 'Governance Approvals & Risk Queue' : 'Active Quotations Pipeline'}
+          subtitle={role === 'sales_manager' ? 'Escalated deals requiring sales manager authorization' : 'Real-time status tracking & risk score engine'}
           className="lg:col-span-2"
         >
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-800">
-              <thead className="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-3">Quote #</th>
-                  <th className="py-3 px-3">Customer</th>
-                  <th className="py-3 px-3">Total Amount</th>
-                  <th className="py-3 px-3">Risk Score</th>
-                  <th className="py-3 px-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {quotations.map((q) => {
-                  const getStatusBadge = (st) => {
-                    if (st === 'Approved' || st === 'Confirmed') return <Badge variant="success">{st}</Badge>;
-                    if (st === 'Pending Approval') return <Badge variant="pending">Pending Approval</Badge>;
-                    if (st === 'Negotiation') return <Badge variant="negotiation">Negotiation</Badge>;
-                    return <Badge variant="draft">Draft</Badge>;
-                  };
-
-                  return (
+            {role === 'sales_manager' ? (
+              <table className="w-full text-left text-sm text-slate-800">
+                <thead className="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-3">Quote #</th>
+                    <th className="py-3 px-3">Customer</th>
+                    <th className="py-3 px-3">Tier</th>
+                    <th className="py-3 px-3">Risk Score</th>
+                    <th className="py-3 px-3">Status</th>
+                    <th className="py-3 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {approvals.slice(0, 7).map((app) => (
                     <tr
-                      key={q.id}
+                      key={app.id || app._id}
                       className="hover:bg-slate-50 transition-colors cursor-pointer"
-                      onClick={() => onNavigate('quotation-builder', q.id)}
+                      onClick={() => onNavigate('approval-detail', app.id || app._id)}
                     >
-                      <td className="py-3.5 px-3 font-bold text-[#714B67]">{q.quote_number}</td>
-                      <td className="py-3.5 px-3 font-medium">{q.customer_name}</td>
-                      <td className="py-3.5 px-3 font-mono font-bold">${q.total_amount?.toLocaleString()}</td>
+                      <td className="py-3.5 px-3 font-bold text-[#714B67]">{app.quote_number}</td>
+                      <td className="py-3.5 px-3 font-medium text-slate-900">{app.customer_name}</td>
                       <td className="py-3.5 px-3">
-                        <Badge variant={q.blended_risk_score > 15 ? 'danger' : q.blended_risk_score > 5 ? 'warning' : 'success'}>
-                          {q.blended_risk_score}%
+                        <Badge variant="brand">{app.customer_tier || 'Gold'}</Badge>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <Badge variant={app.blended_risk_score > 15 ? 'danger' : 'warning'}>
+                          {app.blended_risk_score}%
                         </Badge>
                       </td>
-                      <td className="py-3.5 px-3">{getStatusBadge(q.status)}</td>
+                      <td className="py-3.5 px-3">
+                        <Badge variant={app.status === 'Approved' ? 'success' : app.status === 'Pending' ? 'warning' : 'danger'}>
+                          {app.status}
+                        </Badge>
+                      </td>
+                      <td className="py-3.5 px-3 text-right">
+                        <span className="text-xs font-bold text-[#714B67] hover:underline">
+                          Review &rarr;
+                        </span>
+                      </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <table className="w-full text-left text-sm text-slate-800">
+                <thead className="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-3">Quote #</th>
+                    <th className="py-3 px-3">Customer</th>
+                    <th className="py-3 px-3">Total Amount</th>
+                    <th className="py-3 px-3">Risk Score</th>
+                    <th className="py-3 px-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {quotations.slice(0, 7).map((q) => {
+                    const getStatusBadge = (st) => {
+                      if (st === 'Approved' || st === 'Confirmed') return <Badge variant="success">{st}</Badge>;
+                      if (st === 'Pending Manager Approval') return <Badge variant="danger">Manager Review</Badge>;
+                      if (st === 'Pending Customer Approval') return <Badge variant="purple">Customer Review</Badge>;
+                      if (st === 'Under Negotiation' || st === 'Negotiation') return <Badge variant="negotiation">Negotiation</Badge>;
+                      return <Badge variant="draft">Draft</Badge>;
+                    };
+
+                    return (
+                      <tr
+                        key={q.id || q._id}
+                        className="hover:bg-slate-50 transition-colors cursor-pointer"
+                        onClick={() => onNavigate('quotation-builder', q.id || q._id)}
+                      >
+                        <td className="py-3.5 px-3 font-bold text-[#714B67]">{q.quote_number}</td>
+                        <td className="py-3.5 px-3 font-medium">{q.customer_name}</td>
+                        <td className="py-3.5 px-3 font-mono font-bold">${q.total_amount?.toLocaleString()}</td>
+                        <td className="py-3.5 px-3">
+                          <Badge variant={q.blended_risk_score > 15 ? 'danger' : q.blended_risk_score > 5 ? 'warning' : 'success'}>
+                            {q.blended_risk_score}%
+                          </Badge>
+                        </td>
+                        <td className="py-3.5 px-3">{getStatusBadge(q.status)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </Card>
 

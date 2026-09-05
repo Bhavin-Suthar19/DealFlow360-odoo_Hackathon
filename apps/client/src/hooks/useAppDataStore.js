@@ -1,25 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useModal } from '../context/ModalContext';
 import { api, setAuthToken } from '../services/api';
-import {
-  mockUsers,
-  mockCategories,
-  mockProducts,
-  mockVariants,
-  mockPriceLists,
-  mockDiscountTiers,
-  mockCategoryDiscountCeilings,
-  mockApprovalRules,
-  mockQuotations,
-  mockApprovals,
-  mockWarehouses,
-  mockStock,
-  mockFulfillmentOrders,
-  mockSubscriptions,
-  mockInvoices,
-  mockDealHealthAlerts,
-  mockUpsellRules
-} from '../data/mockData';
 
 export const useAppDataStore = (navigation) => {
   const { showAlert, showConfirm } = useModal();
@@ -92,17 +73,19 @@ export const useAppDataStore = (navigation) => {
   const [quotations, setQuotations] = useState([]);
   const [approvals, setApprovals] = useState([]);
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState(mockCategories);
-  const [variants, setVariants] = useState(mockVariants);
-  const [priceLists, setPriceLists] = useState(mockPriceLists);
-  const [warehouses, setWarehouses] = useState(mockWarehouses);
-  const [stock, setStock] = useState(mockStock);
-  const [fulfillmentOrders, setFulfillmentOrders] = useState(mockFulfillmentOrders);
-  const [subscriptions, setSubscriptions] = useState(mockSubscriptions);
-  const [invoices, setInvoices] = useState(mockInvoices);
-  const [alerts, setAlerts] = useState(mockDealHealthAlerts);
-  const [discountTiers, setDiscountTiers] = useState(mockDiscountTiers);
-  const [categoryCeilings, setCategoryCeilings] = useState(mockCategoryDiscountCeilings);
+  const [categories, setCategories] = useState([]);
+  const [variants, setVariants] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [priceLists, setPriceLists] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [stock, setStock] = useState([]);
+  const [fulfillmentOrders, setFulfillmentOrders] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [discountTiers, setDiscountTiers] = useState([]);
+  const [categoryCeilings, setCategoryCeilings] = useState([]);
+  const [upsellRules, setUpsellRules] = useState([]);
 
   // Active targets
   const activeQuote =
@@ -120,6 +103,16 @@ export const useAppDataStore = (navigation) => {
         a._id === selectedApprovalId ||
         a.quote_number === selectedApprovalId
     ) || approvals[0] || null;
+
+  const linkedApprovalQuote = activeApproval
+    ? quotations.find(
+        (q) =>
+          q.id === activeApproval.quotation_id ||
+          q._id === activeApproval.quotation_id ||
+          (typeof activeApproval.quotation_id === 'object' && (q._id === activeApproval.quotation_id?._id || q.id === activeApproval.quotation_id?.id)) ||
+          q.quote_number === activeApproval.quote_number
+      ) || null
+    : null;
 
   const activeFulfillmentOrder = fulfillmentOrders.find((fo) => fo.id === selectedFulfillmentId || fo._id === selectedFulfillmentId) || fulfillmentOrders[0] || null;
   const activeSubscription = subscriptions.find((s) => s.id === selectedSubscriptionId || s._id === selectedSubscriptionId) || subscriptions[0] || null;
@@ -141,13 +134,15 @@ export const useAppDataStore = (navigation) => {
         altRes,
         catRes,
         varRes,
+        custRes,
         plRes,
         dtRes,
-        dcRes
+        dcRes,
+        upRes
       ] = await Promise.allSettled([
-        api.quotations.getAll(),
-        api.products ? api.products.getAll() : Promise.reject(),
-        api.approvals ? api.approvals.getAll() : Promise.reject(),
+        api.quotations.getAll('limit=500'),
+        api.products ? api.products.getAll('limit=500') : Promise.reject(),
+        api.approvals ? api.approvals.getAll('limit=500') : Promise.reject(),
         api.billing ? api.billing.getInvoices() : Promise.reject(),
         api.warehouses ? api.warehouses.getAll() : Promise.reject(),
         api.warehouses ? api.warehouses.getAllStock() : Promise.reject(),
@@ -156,9 +151,11 @@ export const useAppDataStore = (navigation) => {
         api.dealHealth ? api.dealHealth.getAlerts() : Promise.reject(),
         api.products ? api.products.getCategories() : Promise.reject(),
         api.products ? api.products.getVariants() : Promise.reject(),
+        api.customers ? api.customers.getAll() : Promise.reject(),
         api.priceLists ? api.priceLists.getAll() : Promise.reject(),
         api.discounts ? api.discounts.getTiers() : Promise.reject(),
-        api.discounts ? api.discounts.getCeilings() : Promise.reject()
+        api.discounts ? api.discounts.getCeilings() : Promise.reject(),
+        api.upsell ? api.upsell.getRules() : Promise.reject()
       ]);
 
       if (qRes.status === 'fulfilled' && Array.isArray(qRes.value?.data)) {
@@ -167,41 +164,47 @@ export const useAppDataStore = (navigation) => {
       if (pRes.status === 'fulfilled' && Array.isArray(pRes.value?.data)) {
         setProducts(pRes.value.data);
       }
+      if (custRes.status === 'fulfilled' && Array.isArray(custRes.value?.data)) {
+        setCustomers(custRes.value.data);
+      }
       if (appRes.status === 'fulfilled' && Array.isArray(appRes.value?.data)) {
         setApprovals(appRes.value.data);
       }
       if (invRes.status === 'fulfilled' && Array.isArray(invRes.value?.data)) {
         setInvoices(invRes.value.data);
       }
-      if (whRes.status === 'fulfilled' && Array.isArray(whRes.value?.data) && whRes.value.data.length > 0) {
+      if (whRes.status === 'fulfilled' && Array.isArray(whRes.value?.data)) {
         setWarehouses(whRes.value.data);
       }
-      if (stRes.status === 'fulfilled' && Array.isArray(stRes.value?.data) && stRes.value.data.length > 0) {
+      if (stRes.status === 'fulfilled' && Array.isArray(stRes.value?.data)) {
         setStock(stRes.value.data);
       }
-      if (foRes.status === 'fulfilled' && Array.isArray(foRes.value?.data) && foRes.value.data.length > 0) {
+      if (foRes.status === 'fulfilled' && Array.isArray(foRes.value?.data)) {
         setFulfillmentOrders(foRes.value.data);
       }
-      if (subRes.status === 'fulfilled' && Array.isArray(subRes.value?.data) && subRes.value.data.length > 0) {
+      if (subRes.status === 'fulfilled' && Array.isArray(subRes.value?.data)) {
         setSubscriptions(subRes.value.data);
       }
-      if (altRes.status === 'fulfilled' && Array.isArray(altRes.value?.data) && altRes.value.data.length > 0) {
+      if (altRes.status === 'fulfilled' && Array.isArray(altRes.value?.data)) {
         setAlerts(altRes.value.data);
       }
-      if (catRes.status === 'fulfilled' && Array.isArray(catRes.value?.data) && catRes.value.data.length > 0) {
+      if (catRes.status === 'fulfilled' && Array.isArray(catRes.value?.data)) {
         setCategories(catRes.value.data);
       }
-      if (varRes.status === 'fulfilled' && Array.isArray(varRes.value?.data) && varRes.value.data.length > 0) {
+      if (varRes.status === 'fulfilled' && Array.isArray(varRes.value?.data)) {
         setVariants(varRes.value.data);
       }
-      if (plRes.status === 'fulfilled' && Array.isArray(plRes.value?.data) && plRes.value.data.length > 0) {
+      if (plRes.status === 'fulfilled' && Array.isArray(plRes.value?.data)) {
         setPriceLists(plRes.value.data);
       }
-      if (dtRes.status === 'fulfilled' && Array.isArray(dtRes.value?.data) && dtRes.value.data.length > 0) {
+      if (dtRes.status === 'fulfilled' && Array.isArray(dtRes.value?.data)) {
         setDiscountTiers(dtRes.value.data);
       }
-      if (dcRes.status === 'fulfilled' && Array.isArray(dcRes.value?.data) && dcRes.value.data.length > 0) {
+      if (dcRes.status === 'fulfilled' && Array.isArray(dcRes.value?.data)) {
         setCategoryCeilings(dcRes.value.data);
+      }
+      if (upRes.status === 'fulfilled' && Array.isArray(upRes.value?.data)) {
+        setUpsellRules(upRes.value.data);
       }
     } catch (err) {
       console.warn('Backend connection fallback to initial data store:', err.message);
@@ -249,6 +252,15 @@ export const useAppDataStore = (navigation) => {
   }, [loadBackendData, navigateTo]);
 
   const handleCreateQuotation = useCallback(async () => {
+    if (currentUser?.role && currentUser.role !== 'sales_rep') {
+      showAlert({
+        title: 'Permission Denied',
+        message: 'New quotations can only be created by Sales Representatives.',
+        variant: 'danger'
+      });
+      return;
+    }
+
     try {
       const res = await api.quotations.create({
         customer_id: 'cust-1',
@@ -420,6 +432,65 @@ export const useAppDataStore = (navigation) => {
       }
     });
   }, [selectedQuoteId, quotations, currentUser, showConfirm, setApprovals, navigateTo, loadBackendData]);
+
+  const handleEscalateToManager = useCallback((updatedLines, note = '') => {
+    showConfirm({
+      title: 'Escalate to Sales Manager',
+      message: 'Escalate this quotation directly to the Sales Manager for governance approval? This deal will be routed to the Sales Manager review queue and will NOT be visible to the customer.',
+      confirmText: 'Escalate to Manager',
+      variant: 'warning',
+      onConfirm: async () => {
+        const quoteId = activeQuote?._id || activeQuote?.id || selectedQuoteId;
+        const total = (updatedLines || []).reduce(
+          (sum, l) => sum + l.qty * l.unit_price * (1 - (l.discount_pct || 0) / 100),
+          0
+        );
+
+        let overageSum = 0;
+        let totalWeight = 0;
+        (updatedLines || []).forEach((l) => {
+          const weight = l.qty * l.unit_price;
+          const over = Math.max(0, (l.discount_pct || 0) - (l.discount_limit_pct || 0));
+          totalWeight += weight;
+          overageSum += over * weight;
+        });
+        const riskScore = totalWeight > 0 ? Number((overageSum / totalWeight).toFixed(2)) : 10;
+
+        // Strictly set to Pending Manager Approval
+        setQuotations((prev) =>
+          prev.map((q) => {
+            if (q.id === quoteId || q._id === quoteId) {
+              return {
+                ...q,
+                lines: updatedLines,
+                total_amount: total,
+                blended_risk_score: riskScore,
+                status: 'Pending Manager Approval'
+              };
+            }
+            return q;
+          })
+        );
+
+        try {
+          if (quoteId && !String(quoteId).startsWith('q-temp')) {
+            await api.quotations.escalate(quoteId, note || `Escalated by Sales Rep to Sales Manager for review (Risk Score: ${riskScore}%).`);
+            await loadBackendData();
+          }
+        } catch (err) {
+          console.warn('Backend escalate sync fallback:', err.message);
+        }
+
+        showAlert({
+          title: 'Quotation Escalated to Sales Manager',
+          message: 'Quotation has been escalated to the Sales Manager review queue. The customer cannot see this quote until approved.',
+          variant: 'info'
+        });
+
+        navigateTo('quotations');
+      }
+    });
+  }, [activeQuote, selectedQuoteId, showConfirm, setQuotations, showAlert, navigateTo, loadBackendData]);
 
   const handleApprove = useCallback((approvalId, note) => {
     const app = approvals.find((a) => a.id === approvalId || a._id === approvalId);
@@ -736,7 +807,7 @@ export const useAppDataStore = (navigation) => {
 
   const handleAcceptSplit = useCallback(async (orderId, splitData) => {
     try {
-      if (orderId && !String(orderId).startsWith('fo-mock')) {
+      if (orderId) {
         await api.fulfillment.acceptSplit(orderId);
       }
       setFulfillmentOrders((prev) =>
@@ -770,7 +841,7 @@ export const useAppDataStore = (navigation) => {
       variant: 'warning',
       onConfirm: async () => {
         try {
-          if (orderId && !String(orderId).startsWith('fo-mock')) {
+          if (orderId) {
             await api.fulfillment.manualOverride(orderId, allocations);
           }
           setFulfillmentOrders((prev) =>
@@ -806,7 +877,7 @@ export const useAppDataStore = (navigation) => {
       variant: 'danger',
       onConfirm: async () => {
         try {
-          if (subId && !String(subId).startsWith('sub-mock')) {
+          if (subId) {
             await api.subscriptions.cancel(subId, reason);
           }
           await loadBackendData();
@@ -838,7 +909,7 @@ export const useAppDataStore = (navigation) => {
       variant: 'success',
       onConfirm: async () => {
         try {
-          if (invId && !String(invId).startsWith('inv-mock')) {
+          if (invId) {
             await api.billing.recordPayment(invId, {
               amount: Number(amount),
               payment_method: 'bank_transfer',
@@ -868,7 +939,7 @@ export const useAppDataStore = (navigation) => {
 
   const handleNudgeAlert = useCallback(async (alertId) => {
     try {
-      if (alertId && !String(alertId).startsWith('alert-mock')) {
+      if (alertId) {
         await api.dealHealth.nudge(alertId, 'Sales Rep check-in requested');
       }
       showAlert({
@@ -888,7 +959,7 @@ export const useAppDataStore = (navigation) => {
 
   const handleEscalateAlert = useCallback(async (alertId) => {
     try {
-      if (alertId && !String(alertId).startsWith('alert-mock')) {
+      if (alertId) {
         await api.dealHealth.escalate(alertId, 'Escalated to VP Revenue Operations');
       }
       setAlerts((prev) =>
@@ -966,6 +1037,50 @@ export const useAppDataStore = (navigation) => {
     navigateTo('products');
   }, [loadBackendData, showAlert, navigateTo]);
 
+  const handleAddVariant = useCallback(async (productId, variantData) => {
+    try {
+      const res = await api.products.addVariant(productId, variantData);
+      showAlert({
+        title: 'Variant Created',
+        message: `Variant "${variantData.attribute_name}: ${variantData.attribute_value}" saved to database.`,
+        variant: 'success'
+      });
+      await loadBackendData();
+      return res?.data;
+    } catch (err) {
+      console.warn('Failed to add variant to database:', err.message);
+      showAlert({
+        title: 'Variant Saved Locally',
+        message: 'Saved variant in local state.',
+        variant: 'warning'
+      });
+      setVariants((prev) => [
+        ...prev,
+        {
+          _id: `var-${Date.now()}`,
+          id: `var-${Date.now()}`,
+          product_id: productId,
+          ...variantData
+        }
+      ]);
+    }
+  }, [loadBackendData, showAlert]);
+
+  const handleDeleteVariant = useCallback(async (variantId) => {
+    try {
+      await api.products.deleteVariant(variantId);
+      showAlert({
+        title: 'Variant Removed',
+        message: 'Product variant deleted from database.',
+        variant: 'info'
+      });
+      await loadBackendData();
+    } catch (err) {
+      console.warn('Failed to delete variant from DB:', err.message);
+      setVariants((prev) => prev.filter((v) => (v._id || v.id) !== variantId));
+    }
+  }, [loadBackendData, showAlert]);
+
   const handleSaveDiscountConfig = useCallback(async ({ tiers, ceilings }) => {
     try {
       setDiscountTiers(tiers);
@@ -1035,8 +1150,11 @@ export const useAppDataStore = (navigation) => {
     setDiscountTiers,
     categoryCeilings,
     setCategoryCeilings,
+    upsellRules,
+    setUpsellRules,
     activeQuote,
     activeApproval,
+    linkedApprovalQuote,
     activeFulfillmentOrder,
     activeSubscription,
     activeInvoice,
@@ -1046,6 +1164,7 @@ export const useAppDataStore = (navigation) => {
     handleCreateQuotation,
     handleSaveDraft,
     handleSubmitQuote,
+    handleEscalateToManager,
     handleApprove,
     handleReturn,
     handleReject,
@@ -1057,7 +1176,11 @@ export const useAppDataStore = (navigation) => {
     handleEscalateAlert,
     handleRecalculateAlerts,
     handleSaveProduct,
+    handleAddVariant,
+    handleDeleteVariant,
     handleSaveDiscountConfig,
+    customers,
+    setCustomers,
     onSubmitNegotiation,
     onConfirmQuote,
     isDataLoading,

@@ -26,6 +26,7 @@ import {
 export const QuotationBuilderView = ({
   quote,
   products = [],
+  customers = [],
   upsellRules = [],
   onBack,
   onSubmitQuote,
@@ -36,13 +37,22 @@ export const QuotationBuilderView = ({
   const { showAlert } = useModal() || {};
   const [bulkDiscountInput, setBulkDiscountInput] = useState('');
 
-  const customerList = [
-    { id: 'c-101', name: 'Acme Corp', tier: 'Gold' },
-    { id: 'c-102', name: 'TechCorp Inc', tier: 'Platinum' },
-    { id: 'c-103', name: 'Nexus Logistics', tier: 'Bronze' },
-    { id: 'c-104', name: 'Vanguard Health', tier: 'Gold' },
-    { id: 'cust-1', name: 'Acme Global Industries', tier: 'Gold' }
-  ];
+  const customerList = React.useMemo(() => {
+    if (Array.isArray(customers) && customers.length > 0) {
+      return customers.map((c) => ({
+        id: c._id || c.id,
+        name: c.company_name || c.name || 'Enterprise Customer',
+        tier: c.pricing_tier || 'Gold'
+      }));
+    }
+    return [
+      { id: 'c-101', name: 'Acme Corp', tier: 'Gold' },
+      { id: 'c-102', name: 'TechCorp Inc', tier: 'Platinum' },
+      { id: 'c-103', name: 'Nexus Logistics', tier: 'Bronze' },
+      { id: 'c-104', name: 'Vanguard Health', tier: 'Gold' },
+      { id: 'cust-1', name: 'Acme Global Industries', tier: 'Gold' }
+    ];
+  }, [customers]);
 
   const [customer, setCustomer] = useState(() => {
     if (!quote?.customer_name) return customerList[0];

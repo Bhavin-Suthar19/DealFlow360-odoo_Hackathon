@@ -3,12 +3,30 @@ import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Tabs from '../components/ui/Tabs';
+import Pagination from '../components/ui/Pagination';
+import usePagination from '../hooks/usePagination';
 import { ArrowRight } from 'lucide-react';
 
 export const SubscriptionsListView = ({ subscriptions = [], onSelectSubscription }) => {
   const [activeTab, setActiveTab] = useState('Active');
 
   const filteredSubs = subscriptions.filter((s) => s.status === activeTab);
+
+  const {
+    currentPage,
+    pageSize,
+    totalPages,
+    totalItems,
+    paginatedItems: paginatedSubs,
+    onPageChange,
+    onPageSizeChange,
+    resetPage
+  } = usePagination(filteredSubs, 10);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    resetPage();
+  };
 
   return (
     <div className="space-y-6">
@@ -28,7 +46,7 @@ export const SubscriptionsListView = ({ subscriptions = [], onSelectSubscription
           { id: 'Cancelled', label: 'Cancelled', badge: subscriptions.filter((s) => s.status === 'Cancelled').length }
         ]}
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
       />
 
       {/* Subscription Table */}
@@ -48,14 +66,14 @@ export const SubscriptionsListView = ({ subscriptions = [], onSelectSubscription
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredSubs.length === 0 ? (
+              {paginatedSubs.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-500 italic">
                     No subscriptions found in '{activeTab}' status
                   </td>
                 </tr>
               ) : (
-                filteredSubs.map((sub) => {
+                paginatedSubs.map((sub) => {
                   const subId = sub._id || sub.id;
                   const custName = sub.customer_name || sub.customer_id?.name || 'Enterprise Customer';
                   const planName = sub.plan_name || sub.plan_id?.name || 'Enterprise Cloud Plan';
@@ -88,6 +106,16 @@ export const SubscriptionsListView = ({ subscriptions = [], onSelectSubscription
             </tbody>
           </table>
         </div>
+
+        {/* Universal Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
       </Card>
     </div>
   );

@@ -2,11 +2,23 @@ import React, { useState, useRef } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
+import Pagination from '../components/ui/Pagination';
+import usePagination from '../hooks/usePagination';
 import { LayoutGrid, List, Plus, ArrowRight, Percent, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
 
-export const QuotationsKanbanView = ({ quotations = [], onSelectQuote, onCreateQuote }) => {
+export const QuotationsKanbanView = ({ quotations = [], currentUser = {}, onSelectQuote, onCreateQuote }) => {
   const [viewMode, setViewMode] = useState('kanban');
   const sliderRef = useRef(null);
+
+  const {
+    currentPage,
+    pageSize,
+    totalPages,
+    totalItems,
+    paginatedItems: paginatedQuotes,
+    onPageChange,
+    onPageSizeChange
+  } = usePagination(quotations, 10);
 
   const scrollSlider = (direction) => {
     if (sliderRef.current) {
@@ -87,9 +99,11 @@ export const QuotationsKanbanView = ({ quotations = [], onSelectQuote, onCreateQ
             </button>
           </div>
 
-          <Button variant="primary" icon={Plus} onClick={onCreateQuote}>
-            New Quotation
-          </Button>
+          {currentUser?.role === 'sales_rep' && onCreateQuote && (
+            <Button variant="primary" icon={Plus} onClick={onCreateQuote}>
+              New Quotation
+            </Button>
+          )}
         </div>
       </div>
 
@@ -212,49 +226,67 @@ export const QuotationsKanbanView = ({ quotations = [], onSelectQuote, onCreateQ
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {quotations.map((q) => {
-                  const qKey = q.id || q._id;
-                  return (
-                    <tr key={qKey} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-[#714B67]">{q.quote_number}</td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-900">{q.customer_name}</td>
-                      <td className="py-3.5 px-4">
-                        <Badge variant="brand">{q.customer_tier}</Badge>
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600">{q.sales_rep_name}</td>
-                      <td className="py-3.5 px-4 font-black text-slate-900">
-                        {q.status === 'RFQ Received' ? <span className="text-xs text-slate-400 font-normal italic">Pending</span> : `$${q.total_amount?.toLocaleString()}`}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        {q.status === 'RFQ Received' ? (
-                          <span className="text-xs text-slate-400 font-normal italic">N/A</span>
-                        ) : (
-                          <Badge variant={q.blended_risk_score > 15 ? 'danger' : q.blended_risk_score > 5 ? 'warning' : 'success'}>
-                            {q.blended_risk_score}%
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="flex flex-col gap-1 items-start">
-                          {getStatusBadge(q.status)}
-                          {(q.counter_offer || q.counter_discount_pct) && (
-                            <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
-                              Counter: {q.counter_offer?.counter_discount_pct || q.counter_discount_pct}%
-                            </span>
+                {paginatedQuotes.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-slate-500 italic">
+                      No quotations found.
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedQuotes.map((q) => {
+                    const qKey = q.id || q._id;
+                    return (
+                      <tr key={qKey} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-[#714B67]">{q.quote_number}</td>
+                        <td className="py-3.5 px-4 font-semibold text-slate-900">{q.customer_name}</td>
+                        <td className="py-3.5 px-4">
+                          <Badge variant="brand">{q.customer_tier}</Badge>
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600">{q.sales_rep_name}</td>
+                        <td className="py-3.5 px-4 font-black text-slate-900">
+                          {q.status === 'RFQ Received' ? <span className="text-xs text-slate-400 font-normal italic">Pending</span> : `$${q.total_amount?.toLocaleString()}`}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {q.status === 'RFQ Received' ? (
+                            <span className="text-xs text-slate-400 font-normal italic">N/A</span>
+                          ) : (
+                            <Badge variant={q.blended_risk_score > 15 ? 'danger' : q.blended_risk_score > 5 ? 'warning' : 'success'}>
+                              {q.blended_risk_score}%
+                            </Badge>
                           )}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <Button size="sm" variant="ghost" onClick={() => onSelectQuote(qKey)} icon={ArrowRight}>
-                          Open Quote
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex flex-col gap-1 items-start">
+                            {getStatusBadge(q.status)}
+                            {(q.counter_offer || q.counter_discount_pct) && (
+                              <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                Counter: {q.counter_offer?.counter_discount_pct || q.counter_discount_pct}%
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <Button size="sm" variant="ghost" onClick={() => onSelectQuote(qKey)} icon={ArrowRight}>
+                            Open Quote
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
+
+          {/* Universal Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+          />
         </Card>
       )}
     </div>

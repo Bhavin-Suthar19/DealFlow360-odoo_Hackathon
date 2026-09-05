@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, FileText, ShoppingBag, MessageSquare, User, LogOut } from 'lucide-react';
+import { Building2, FileText, ShoppingBag, User, LogOut } from 'lucide-react';
 
 export const CustomerPortalNavbar = ({
   customerName = 'Acme Global Industries',
@@ -10,7 +10,6 @@ export const CustomerPortalNavbar = ({
   const portalNavItems = [
     { id: 'quote', label: 'My Quotation', icon: FileText },
     { id: 'rfq', label: 'Ask for Quotation (RFQ)', icon: ShoppingBag },
-    { id: 'messages', label: 'Messages', icon: MessageSquare },
     { id: 'profile', label: 'Account Profile', icon: User }
   ];
 
