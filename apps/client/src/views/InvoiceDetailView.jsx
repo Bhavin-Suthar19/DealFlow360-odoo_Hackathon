@@ -18,6 +18,14 @@ export const InvoiceDetailView = ({ invoice, onBack, onRecordPayment }) => {
     );
   }
 
+  const invId = invoice._id || invoice.id;
+  const customerName = invoice.customer_name || invoice.customer_id?.name || 'Enterprise Customer';
+  const quoteNumber = invoice.quote_number || invoice.quotation_id?.quote_number || 'Origin Quote';
+
+  const handleDownloadPDF = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -28,17 +36,17 @@ export const InvoiceDetailView = ({ invoice, onBack, onRecordPayment }) => {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{invoice.invoice_number}</h1>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{invoice.invoice_number || `INV-${invId.slice(-4)}`}</h1>
               <Badge variant={invoice.status === 'Paid' ? 'success' : 'danger'}>{invoice.status}</Badge>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Customer: {invoice.customer_name} | Origin Quote: {invoice.quote_number}
+              Customer: {customerName} | Origin Quote: {quoteNumber}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="secondary" icon={Download}>
+          <Button variant="secondary" icon={Download} onClick={handleDownloadPDF}>
             Download PDF Summary
           </Button>
           {invoice.status !== 'Paid' && (
@@ -145,7 +153,7 @@ export const InvoiceDetailView = ({ invoice, onBack, onRecordPayment }) => {
             <Button
               variant="success"
               onClick={() => {
-                onRecordPayment(invoice.id, paymentAmount);
+                onRecordPayment(invId, Number(paymentAmount));
                 setIsPaymentModalOpen(false);
               }}
             >

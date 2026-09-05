@@ -77,25 +77,29 @@ export const ProductCatalogView = ({ products = [], variants = [], priceLists = 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {products.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50">
-                  <td className="py-3.5 px-4 font-bold text-slate-900">{p.name}</td>
-                  <td className="py-3.5 px-4 text-[#714B67] font-semibold">{p.category_name}</td>
-                  <td className="py-3.5 px-4 text-xs font-semibold text-slate-500">{p.unit}</td>
-                  <td className="py-3.5 px-4 text-right font-mono font-extrabold text-slate-900">
-                    ${p.base_price?.toLocaleString()}
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    {p.is_subscription ? <Badge variant="purple">Yes ({p.recurring_cycle})</Badge> : <Badge variant="default">No</Badge>}
-                  </td>
-                  <td className="py-3.5 px-4 text-center text-slate-600 font-mono">{p.tax_pct}%</td>
-                  <td className="py-3.5 px-4 text-right">
-                    <Button size="sm" variant="ghost" icon={ArrowRight} onClick={() => onSelectProduct(p.id)}>
-                      Configure
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+              {products.map((p) => {
+                const prodId = p._id || p.id;
+                const catName = p.category_name || (typeof p.category_id === 'object' ? p.category_id?.name : (p.category_id === 'cat-1' ? 'Hardware' : p.category_id === 'cat-2' ? 'SaaS Subscriptions' : p.category_id === 'cat-3' ? 'Professional Services' : p.category_id || 'General'));
+                return (
+                  <tr key={prodId} className="hover:bg-slate-50">
+                    <td className="py-3.5 px-4 font-bold text-slate-900">{p.name}</td>
+                    <td className="py-3.5 px-4 text-[#714B67] font-semibold">{catName}</td>
+                    <td className="py-3.5 px-4 text-xs font-semibold text-slate-500">{p.unit || 'unit'}</td>
+                    <td className="py-3.5 px-4 text-right font-mono font-extrabold text-slate-900">
+                      ${(p.base_price || 0).toLocaleString()}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      {p.is_subscription ? <Badge variant="purple">Yes ({p.recurring_cycle || 'monthly'})</Badge> : <Badge variant="default">No</Badge>}
+                    </td>
+                    <td className="py-3.5 px-4 text-center text-slate-600 font-mono">{p.tax_pct || 0}%</td>
+                    <td className="py-3.5 px-4 text-right">
+                      <Button size="sm" variant="ghost" icon={ArrowRight} onClick={() => onSelectProduct(prodId)}>
+                        Configure
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

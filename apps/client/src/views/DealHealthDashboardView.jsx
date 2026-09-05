@@ -79,32 +79,41 @@ export const DealHealthDashboardView = ({ alerts = [], onEscalate, onNudge, onRe
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {alerts.map((al) => (
-                <tr key={al.id} className="hover:bg-slate-50">
-                  <td className="py-3.5 px-4 font-bold text-[#714B67]">{al.quote_number}</td>
-                  <td className="py-3.5 px-4 font-medium text-slate-900">{al.customer_name}</td>
-                  <td className="py-3.5 px-4">
-                    <Badge variant={al.alert_type === 'Stalled Deal' ? 'danger' : 'warning'}>{al.alert_type}</Badge>
-                  </td>
-                  <td className="py-3.5 px-4 text-xs text-slate-600 max-w-xs">{al.detail}</td>
-                  <td className="py-3.5 px-4 text-xs text-slate-500">{new Date(al.flagged_at).toLocaleDateString()}</td>
-                  <td className="py-3.5 px-4">
-                    <Badge variant={al.status === 'Escalated' ? 'danger' : al.status === 'Nudged' ? 'purple' : 'default'}>
-                      {al.status}
-                    </Badge>
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button size="sm" variant="warning" icon={Bell} onClick={() => onNudge(al.id)}>
-                        Nudge Rep
-                      </Button>
-                      <Button size="sm" variant="danger" icon={Send} onClick={() => onEscalate(al.id)}>
-                        Escalate
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {alerts.map((al) => {
+                const alertId = al._id || al.id;
+                const quoteNumber = al.quote_number || al.quotation_id?.quote_number || 'Quote Alert';
+                const customerName = al.customer_name || al.quotation_id?.customer_name || 'Enterprise Customer';
+                const detail = al.detail || al.details || 'Anomaly detected in deal velocity or margin structure.';
+                const dateStr = al.flagged_at || al.createdAt ? new Date(al.flagged_at || al.createdAt).toLocaleDateString() : 'Active';
+                return (
+                  <tr key={alertId} className="hover:bg-slate-50">
+                    <td className="py-3.5 px-4 font-bold text-[#714B67]">{quoteNumber}</td>
+                    <td className="py-3.5 px-4 font-medium text-slate-900">{customerName}</td>
+                    <td className="py-3.5 px-4">
+                      <Badge variant={al.alert_type === 'Stalled Deal' || al.alert_type === 'Stalled Negotiation' ? 'danger' : 'warning'}>
+                        {al.alert_type}
+                      </Badge>
+                    </td>
+                    <td className="py-3.5 px-4 text-xs text-slate-600 max-w-xs">{detail}</td>
+                    <td className="py-3.5 px-4 text-xs text-slate-500">{dateStr}</td>
+                    <td className="py-3.5 px-4">
+                      <Badge variant={al.status === 'Escalated' ? 'danger' : al.status === 'Nudged' ? 'purple' : 'default'}>
+                        {al.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button size="sm" variant="warning" icon={Bell} onClick={() => onNudge(alertId)}>
+                          Nudge Rep
+                        </Button>
+                        <Button size="sm" variant="danger" icon={Send} onClick={() => onEscalate(alertId)}>
+                          Escalate
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

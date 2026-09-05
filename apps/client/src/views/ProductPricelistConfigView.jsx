@@ -6,8 +6,9 @@ import Badge from '../components/ui/Badge';
 import { ArrowLeft, Save, Plus } from 'lucide-react';
 
 export const ProductPricelistConfigView = ({ product, categories = [], onBack, onSaveProduct }) => {
+  const initialCategory = product ? (typeof product.category_id === 'object' ? product.category_id?._id : product.category_id) : (categories[0]?._id || categories[0]?.id || 'cat-1');
   const [name, setName] = useState(product ? product.name : '');
-  const [categoryId, setCategoryId] = useState(product ? product.category_id : categories[0]?.id || '');
+  const [categoryId, setCategoryId] = useState(initialCategory || 'cat-1');
   const [unit, setUnit] = useState(product ? product.unit : 'unit');
   const [basePrice, setBasePrice] = useState(product ? product.base_price : 1000);
   const [taxPct, setTaxPct] = useState(product ? product.tax_pct : 8.5);
@@ -18,7 +19,8 @@ export const ProductPricelistConfigView = ({ product, categories = [], onBack, o
   const handleSubmit = (e) => {
     e.preventDefault();
     onSaveProduct({
-      id: product ? product.id : `prod-${Date.now()}`,
+      _id: product?._id,
+      id: product?._id || product?.id,
       name,
       category_id: categoryId,
       unit,
@@ -69,7 +71,7 @@ export const ProductPricelistConfigView = ({ product, categories = [], onBack, o
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-[#714B67]"
                 >
                   {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
+                    <option key={c._id || c.id} value={c._id || c.id}>
                       {c.name}
                     </option>
                   ))}

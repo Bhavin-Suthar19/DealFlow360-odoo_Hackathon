@@ -30,12 +30,14 @@ export const FulfillmentStockView = ({ stock = [], fulfillmentOrders = [], onSel
             </thead>
             <tbody className="divide-y divide-slate-100">
               {stock.map((st) => (
-                <tr key={st.id} className="hover:bg-slate-50">
-                  <td className="py-3 px-4 font-bold text-slate-900">{st.warehouse_name}</td>
-                  <td className="py-3 px-4 text-[#714B67] font-semibold">{st.product_name}</td>
-                  <td className="py-3 px-4 text-center font-mono">{st.qty_in_stock}</td>
-                  <td className="py-3 px-4 text-center font-mono text-amber-600">{st.qty_reserved}</td>
-                  <td className="py-3 px-4 text-center font-mono font-extrabold text-emerald-600">{st.qty_available}</td>
+                <tr key={st._id || st.id} className="hover:bg-slate-50">
+                  <td className="py-3 px-4 font-bold text-slate-900">{st.warehouse_name || st.warehouse_id?.name || 'Main Warehouse'}</td>
+                  <td className="py-3 px-4 text-[#714B67] font-semibold">{st.product_name || st.product_id?.name || 'Product'}</td>
+                  <td className="py-3 px-4 text-center font-mono">{st.qty_in_stock ?? 0}</td>
+                  <td className="py-3 px-4 text-center font-mono text-amber-600">{st.qty_reserved ?? 0}</td>
+                  <td className="py-3 px-4 text-center font-mono font-extrabold text-emerald-600">
+                    {st.qty_available ?? Math.max(0, (st.qty_in_stock || 0) - (st.qty_reserved || 0))}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -57,21 +59,26 @@ export const FulfillmentStockView = ({ stock = [], fulfillmentOrders = [], onSel
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {fulfillmentOrders.map((fo) => (
-                <tr key={fo.id} className="hover:bg-slate-50">
-                  <td className="py-3.5 px-4 font-mono text-xs text-slate-500">{fo.id}</td>
-                  <td className="py-3.5 px-4 font-bold text-[#714B67]">{fo.quote_number}</td>
-                  <td className="py-3.5 px-4 font-semibold text-slate-900">{fo.customer_name}</td>
-                  <td className="py-3.5 px-4">
-                    <Badge variant="warning">{fo.status}</Badge>
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <Button size="sm" variant="primary" icon={ArrowRight} onClick={() => onSelectOrder(fo.id)}>
-                      Review Split
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+              {fulfillmentOrders.map((fo) => {
+                const orderId = fo._id || fo.id;
+                const quoteNumber = fo.quote_number || fo.quotation_id?.quote_number || 'Confirmed Quote';
+                const customerName = fo.customer_name || fo.quotation_id?.customer_name || 'Enterprise Customer';
+                return (
+                  <tr key={orderId} className="hover:bg-slate-50">
+                    <td className="py-3.5 px-4 font-mono text-xs text-slate-500">{orderId}</td>
+                    <td className="py-3.5 px-4 font-bold text-[#714B67]">{quoteNumber}</td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-900">{customerName}</td>
+                    <td className="py-3.5 px-4">
+                      <Badge variant={fo.status === 'Allocated' ? 'success' : 'warning'}>{fo.status}</Badge>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <Button size="sm" variant="primary" icon={ArrowRight} onClick={() => onSelectOrder(orderId)}>
+                        Review Split
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -55,26 +55,35 @@ export const SubscriptionsListView = ({ subscriptions = [], onSelectSubscription
                   </td>
                 </tr>
               ) : (
-                filteredSubs.map((sub) => (
-                  <tr key={sub.id} className="hover:bg-slate-50">
-                    <td className="py-3.5 px-4 font-mono text-xs text-[#714B67] font-bold">{sub.id}</td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-900">{sub.customer_name}</td>
-                    <td className="py-3.5 px-4 text-slate-700">{sub.plan_name}</td>
-                    <td className="py-3.5 px-4 uppercase text-xs font-bold text-slate-500">{sub.cycle}</td>
-                    <td className="py-3.5 px-4 text-slate-600">{sub.next_bill_date}</td>
-                    <td className="py-3.5 px-4 font-black text-slate-900">${sub.amount.toLocaleString()}</td>
-                    <td className="py-3.5 px-4">
-                      <Badge variant={sub.status === 'Active' ? 'success' : sub.status === 'Paused' ? 'warning' : 'danger'}>
-                        {sub.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <Button size="sm" variant="ghost" icon={ArrowRight} onClick={() => onSelectSubscription(sub.id)}>
-                        Manage
-                      </Button>
-                    </td>
-                  </tr>
-                ))
+                filteredSubs.map((sub) => {
+                  const subId = sub._id || sub.id;
+                  const custName = sub.customer_name || sub.customer_id?.name || 'Enterprise Customer';
+                  const planName = sub.plan_name || sub.plan_id?.name || 'Enterprise Cloud Plan';
+                  const cycle = sub.cycle || sub.plan_id?.cycle || 'monthly';
+                  const nextDate = sub.next_bill_date ? new Date(sub.next_bill_date).toLocaleDateString() : 'Next Cycle';
+                  const amount = Number(sub.amount || sub.recurring_amount || sub.plan_id?.base_fee || 0);
+
+                  return (
+                    <tr key={subId} className="hover:bg-slate-50">
+                      <td className="py-3.5 px-4 font-mono text-xs text-[#714B67] font-bold">{subId}</td>
+                      <td className="py-3.5 px-4 font-semibold text-slate-900">{custName}</td>
+                      <td className="py-3.5 px-4 text-slate-700">{planName}</td>
+                      <td className="py-3.5 px-4 uppercase text-xs font-bold text-slate-500">{cycle}</td>
+                      <td className="py-3.5 px-4 text-slate-600">{nextDate}</td>
+                      <td className="py-3.5 px-4 font-black text-slate-900">${amount.toLocaleString()}</td>
+                      <td className="py-3.5 px-4">
+                        <Badge variant={sub.status === 'Active' ? 'success' : sub.status === 'Paused' ? 'warning' : 'danger'}>
+                          {sub.status}
+                        </Badge>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <Button size="sm" variant="ghost" icon={ArrowRight} onClick={() => onSelectSubscription(subId)}>
+                          Manage
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

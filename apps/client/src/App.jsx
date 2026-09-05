@@ -23,14 +23,16 @@ export function App() {
     onConfirmQuote
   } = dataStore;
 
-  // Show a branded loading screen while verifying stored session
-  if (!sessionChecked) {
+  // Show a branded loading screen while verifying stored session or loading initial data
+  if (!sessionChecked || (currentUser && dataStore.isDataLoading && (!dataStore.quotations || dataStore.quotations.length === 0))) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#714B67] shadow-xl shadow-[#714B67]/20 animate-pulse">
           <Building2 className="w-8 h-8 text-white" />
         </div>
-        <p className="text-sm font-semibold text-slate-500 animate-pulse">Restoring session…</p>
+        <p className="text-sm font-semibold text-slate-500 animate-pulse">
+          {!sessionChecked ? 'Restoring session…' : 'Loading DealFlow360 pipeline…'}
+        </p>
       </div>
     );
   }
@@ -45,9 +47,13 @@ export function App() {
       ) : currentView === 'portal' ? (
         <CustomerPortalNegotiationView
           quote={activeQuote}
+          quotations={dataStore.quotations}
+          onSelectQuote={dataStore.setSelectedQuoteId}
+          products={dataStore.products}
           onLogout={handleLogout}
           onSubmitNegotiation={onSubmitNegotiation}
           onConfirmQuote={onConfirmQuote}
+          onRefreshData={dataStore.refreshData}
         />
       ) : (
         <>

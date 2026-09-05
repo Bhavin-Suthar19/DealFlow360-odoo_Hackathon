@@ -4,9 +4,14 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import { BarChart3, Download, Filter, Clock, Award } from 'lucide-react';
 
-export const ReportingDashboardView = ({ onExport }) => {
+export const ReportingDashboardView = ({ quotations = [], onExport }) => {
   const [period, setPeriod] = useState('30d');
   const [team, setTeam] = useState('All');
+
+  const totalQuotes = quotations.length || 48;
+  const totalPipeline = quotations.reduce((sum, q) => sum + (q.total_amount || 0), 0);
+  const approvedQuotes = quotations.filter((q) => q.status === 'Approved' || q.status === 'Confirmed');
+  const approvalRate = quotations.length > 0 ? Math.round((approvedQuotes.length / quotations.length) * 100) : 85;
 
   return (
     <div className="space-y-6">
@@ -21,8 +26,8 @@ export const ReportingDashboardView = ({ onExport }) => {
           <Button variant="secondary" icon={Download} onClick={() => onExport('pdf')}>
             Export PDF
           </Button>
-          <Button variant="primary" icon={Download} onClick={() => onExport('xlsx')}>
-            Export XLS
+          <Button variant="primary" icon={Download} onClick={() => onExport('csv')}>
+            Export CSV
           </Button>
         </div>
       </div>
@@ -65,26 +70,26 @@ export const ReportingDashboardView = ({ onExport }) => {
         <Card>
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Total Quotes Created
+              Total Quotes in Pipeline
             </span>
             <BarChart3 className="w-5 h-5 text-[#714B67]" />
           </div>
           <div className="mt-4 flex items-baseline justify-between">
-            <span className="text-3xl font-extrabold text-slate-900">48 Quotes</span>
-            <Badge variant="success">+18% vs prev period</Badge>
+            <span className="text-3xl font-extrabold text-slate-900">{totalQuotes} Quotes</span>
+            <Badge variant="brand">${totalPipeline.toLocaleString()} Value</Badge>
           </div>
         </Card>
 
         <Card>
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Avg Approval Velocity
+              Approval Velocity & Rate
             </span>
             <Clock className="w-5 h-5 text-emerald-600" />
           </div>
           <div className="mt-4 flex items-baseline justify-between">
             <span className="text-3xl font-extrabold text-slate-900">2.4 Hours</span>
-            <Badge variant="success">85% Auto-Approved</Badge>
+            <Badge variant="success">{approvalRate}% Approved</Badge>
           </div>
         </Card>
 

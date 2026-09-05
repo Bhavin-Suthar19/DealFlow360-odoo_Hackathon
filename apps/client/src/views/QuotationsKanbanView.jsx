@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
-import { LayoutGrid, List, Plus, ArrowRight } from 'lucide-react';
+import { LayoutGrid, List, Plus, ArrowRight, Percent, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
 
 export const QuotationsKanbanView = ({ quotations = [], onSelectQuote, onCreateQuote }) => {
   const [viewMode, setViewMode] = useState('kanban');
+  const sliderRef = useRef(null);
+
+  const scrollSlider = (direction) => {
+    if (sliderRef.current) {
+      const scrollAmount = direction === 'left' ? -340 : 340;
+      sliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   const columns = [
     { id: 'RFQ Received', title: '1. RFQ Received', color: 'border-blue-300 bg-blue-50/40' },
@@ -36,6 +44,30 @@ export const QuotationsKanbanView = ({ quotations = [], onSelectQuote, onCreateQ
           <p className="text-sm text-slate-500">Configure, price, and track deal stages across governance workflows</p>
         </div>
         <div className="flex items-center gap-3">
+          {viewMode === 'kanban' && (
+            <div className="flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-xl p-1 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => scrollSlider('left')}
+                title="Slide Left"
+                className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer shadow-2xs"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-[11px] font-bold text-slate-500 px-2 select-none">
+                7 Stages
+              </span>
+              <button
+                type="button"
+                onClick={() => scrollSlider('right')}
+                title="Slide Right"
+                className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer shadow-2xs"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center bg-slate-100 border border-slate-200 rounded-xl p-1">
             <button
               onClick={() => setViewMode('kanban')}
@@ -63,51 +95,105 @@ export const QuotationsKanbanView = ({ quotations = [], onSelectQuote, onCreateQ
 
       {/* View Rendering */}
       {viewMode === 'kanban' ? (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 overflow-x-auto pb-4">
-          {columns.map((col) => {
-            const colQuotes = quotations.filter((q) => q.status === col.id);
-            return (
-              <div key={col.id} className={`rounded-xl border p-3.5 min-w-[240px] flex flex-col gap-3 ${col.color}`}>
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                  <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">{col.title}</h3>
-                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-700">
-                    {colQuotes.length}
-                  </span>
-                </div>
+        <div className="space-y-2">
+          <div
+            ref={sliderRef}
+            className="flex items-start gap-4 overflow-x-auto pb-4 pt-1 no-scrollbar scroll-smooth"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            {columns.map((col) => {
+              const colQuotes = quotations.filter((q) => {
+                if (col.id === 'Approved') return q.status === 'Approved' || q.status === 'Confirmed';
+                if (col.id === 'Under Negotiation') return q.status === 'Under Negotiation' || q.status === 'Negotiation';
+                return q.status === col.id;
+              });
 
-                <div className="flex flex-col gap-3 min-h-[300px]">
-                  {colQuotes.length === 0 ? (
-                    <div className="h-full flex items-center justify-center text-xs text-slate-400 italic py-10">
-                      No deals in {col.title}
-                    </div>
-                  ) : (
-                    colQuotes.map((q) => (
-                      <div
-                        key={q.id}
-                        onClick={() => onSelectQuote(q.id)}
-                        className="bg-white border border-slate-200 hover:border-[#714B67]/50 p-4 rounded-xl shadow-xs hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 cursor-pointer space-y-3"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-extrabold text-[#714B67]">{q.quote_number}</span>
-                          <Badge variant="brand">{q.customer_tier || 'Gold'}</Badge>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-900">{q.customer_name}</h4>
-                          <span className="text-xs text-slate-500">Rep: {q.sales_rep_name}</span>
-                        </div>
-                        <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                          <span className="text-sm font-black text-slate-900">${q.total_amount?.toLocaleString()}</span>
-                          <Badge variant={q.blended_risk_score > 15 ? 'danger' : q.blended_risk_score > 5 ? 'warning' : 'success'}>
-                            Risk: {q.blended_risk_score}%
-                          </Badge>
-                        </div>
+              return (
+                <div
+                  key={col.id}
+                  className={`rounded-2xl border p-4 w-72 sm:w-80 min-w-[280px] max-w-[320px] shrink-0 flex flex-col gap-3 shadow-xs ${col.color}`}
+                >
+                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/80">
+                    <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">{col.title}</h3>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-white/80 border border-slate-200 text-slate-700 shadow-2xs">
+                      {colQuotes.length}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-3 min-h-[360px]">
+                    {colQuotes.length === 0 ? (
+                      <div className="h-full flex items-center justify-center text-xs text-slate-400 italic py-16 bg-white/40 rounded-xl border border-dashed border-slate-300/60">
+                        No deals in {col.title}
                       </div>
-                    ))
-                  )}
+                    ) : (
+                      colQuotes.map((q) => {
+                        const qKey = q.id || q._id;
+                        return (
+                          <div
+                            key={qKey}
+                            onClick={() => onSelectQuote(qKey)}
+                            className="bg-white border border-slate-200 hover:border-[#714B67]/50 p-4 rounded-xl shadow-xs hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 cursor-pointer space-y-3"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-extrabold text-[#714B67]">{q.quote_number}</span>
+                              <Badge variant="brand">{q.customer_tier || 'Gold'}</Badge>
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-bold text-slate-900">{q.customer_name}</h4>
+                              <span className="text-xs text-slate-500">Rep: {q.sales_rep_name}</span>
+                            </div>
+                            {(q.counter_offer || q.counter_discount_pct) && (
+                              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-900 border border-amber-200 rounded-lg text-xs font-semibold">
+                                <Percent className="w-3 h-3 text-amber-600 shrink-0" />
+                                <span>Counter: {q.counter_offer?.counter_discount_pct || q.counter_discount_pct}% requested</span>
+                              </div>
+                            )}
+                            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                              {q.status === 'RFQ Received' ? (
+                                <span className="text-xs font-bold text-slate-500 italic">Awaiting Pricing</span>
+                              ) : (
+                                <>
+                                  <span className="text-sm font-black text-slate-900">${q.total_amount?.toLocaleString()}</span>
+                                  <Badge variant={q.blended_risk_score > 15 ? 'danger' : q.blended_risk_score > 5 ? 'warning' : 'success'}>
+                                    Risk: {q.blended_risk_score}%
+                                  </Badge>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+
+          {/* Bottom Slider Track Indicator & Navigation Hint */}
+          <div className="flex items-center justify-between pt-1 px-1 text-xs text-slate-400">
+            <span className="flex items-center gap-1.5 font-medium">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-[#714B67]" />
+              Scroll horizontally or use arrows to slide through all 7 pipeline stages
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => scrollSlider('left')}
+                className="hover:text-slate-800 font-semibold cursor-pointer transition-colors"
+              >
+                ← Slide Left
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => scrollSlider('right')}
+                className="hover:text-slate-800 font-semibold cursor-pointer transition-colors"
+              >
+                Slide Right →
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
         <Card>
@@ -126,28 +212,46 @@ export const QuotationsKanbanView = ({ quotations = [], onSelectQuote, onCreateQ
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {quotations.map((q) => (
-                  <tr key={q.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-[#714B67]">{q.quote_number}</td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-900">{q.customer_name}</td>
-                    <td className="py-3.5 px-4">
-                      <Badge variant="brand">{q.customer_tier}</Badge>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600">{q.sales_rep_name}</td>
-                    <td className="py-3.5 px-4 font-black text-slate-900">${q.total_amount?.toLocaleString()}</td>
-                    <td className="py-3.5 px-4">
-                      <Badge variant={q.blended_risk_score > 15 ? 'danger' : q.blended_risk_score > 5 ? 'warning' : 'success'}>
-                        {q.blended_risk_score}%
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 px-4">{getStatusBadge(q.status)}</td>
-                    <td className="py-3.5 px-4 text-right">
-                      <Button size="sm" variant="ghost" onClick={() => onSelectQuote(q.id)} icon={ArrowRight}>
-                        Open Quote
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {quotations.map((q) => {
+                  const qKey = q.id || q._id;
+                  return (
+                    <tr key={qKey} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-[#714B67]">{q.quote_number}</td>
+                      <td className="py-3.5 px-4 font-semibold text-slate-900">{q.customer_name}</td>
+                      <td className="py-3.5 px-4">
+                        <Badge variant="brand">{q.customer_tier}</Badge>
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-600">{q.sales_rep_name}</td>
+                      <td className="py-3.5 px-4 font-black text-slate-900">
+                        {q.status === 'RFQ Received' ? <span className="text-xs text-slate-400 font-normal italic">Pending</span> : `$${q.total_amount?.toLocaleString()}`}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {q.status === 'RFQ Received' ? (
+                          <span className="text-xs text-slate-400 font-normal italic">N/A</span>
+                        ) : (
+                          <Badge variant={q.blended_risk_score > 15 ? 'danger' : q.blended_risk_score > 5 ? 'warning' : 'success'}>
+                            {q.blended_risk_score}%
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex flex-col gap-1 items-start">
+                          {getStatusBadge(q.status)}
+                          {(q.counter_offer || q.counter_discount_pct) && (
+                            <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                              Counter: {q.counter_offer?.counter_discount_pct || q.counter_discount_pct}%
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <Button size="sm" variant="ghost" onClick={() => onSelectQuote(qKey)} icon={ArrowRight}>
+                          Open Quote
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

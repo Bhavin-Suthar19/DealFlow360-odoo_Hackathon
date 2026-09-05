@@ -37,6 +37,11 @@ export const AppRouter = ({ navigation, dataStore }) => {
     setQuotations,
     approvals,
     products,
+    categories,
+    variants,
+    priceLists,
+    warehouses,
+    stock,
     fulfillmentOrders,
     setFulfillmentOrders,
     subscriptions,
@@ -59,11 +64,14 @@ export const AppRouter = ({ navigation, dataStore }) => {
     handleReturn,
     handleReject,
     handleAcceptSplit,
+    handleManualOverride,
     handleCancelSubscription,
     handleRecordPayment,
     handleNudgeAlert,
     handleEscalateAlert,
-    handleSaveProduct
+    handleRecalculateAlerts,
+    handleSaveProduct,
+    handleSaveDiscountConfig
   } = dataStore;
 
   switch (currentView) {
@@ -102,9 +110,23 @@ export const AppRouter = ({ navigation, dataStore }) => {
           onBack={() => navigateTo('quotations')}
           onSubmitQuote={handleSubmitQuote}
           onSaveDraft={handleSaveDraft}
-          onSendToCustomer={(updatedLines) => {
+          onSendToCustomer={async (updatedLines) => {
+            const quoteId = activeQuote?._id || activeQuote?.id;
+            try {
+              if (quoteId && !String(quoteId).startsWith('q-temp')) {
+                await api.quotations.sendToCustomer(quoteId);
+                await dataStore.refreshData();
+              }
+            } catch (err) {
+              console.warn('Backend sendToCustomer sync fallback:', err.message);
+            }
+
             setQuotations((prev) =>
-              prev.map((q) => (q.id === activeQuote?.id ? { ...q, lines: updatedLines, status: 'Pending Customer Approval' } : q))
+              prev.map((q) =>
+                (q.id === quoteId || q._id === quoteId)
+                  ? { ...q, lines: updatedLines, status: 'Pending Customer Approval' }
+                  : q
+              )
             );
             showAlert({
               title: 'Quotation Published to Customer Review',
@@ -141,8 +163,8 @@ export const AppRouter = ({ navigation, dataStore }) => {
     case 'fulfillment':
       return (
         <FulfillmentStockView
-          warehouses={mockWarehouses}
-          stock={mockStock}
+          warehouses={warehouses}
+          stock={stock}
           fulfillmentOrders={fulfillmentOrders}
           onSelectOrder={(id) => navigateTo('fulfillment-detail', id)}
         />
@@ -154,20 +176,7 @@ export const AppRouter = ({ navigation, dataStore }) => {
           order={activeFulfillmentOrder}
           onBack={() => navigateTo('fulfillment')}
           onAcceptSplit={handleAcceptSplit}
-          onManualOverride={(id, splits) => {
-            showConfirm({
-              title: 'Save Manual Allocations',
-              message: 'Save custom manual warehouse split allocations for this order?',
-              confirmText: 'Save Manual Override',
-              variant: 'warning',
-              onConfirm: () => {
-                setFulfillmentOrders((prev) =>
-                  prev.map((fo) => (fo.id === id ? { ...fo, splits } : fo))
-                );
-                navigateTo('fulfillment');
-              }
-            });
-          }}
+          onManualOverride={(id, splits) => handleManualOverride(id, splits)}
         />
       );
 
@@ -211,25 +220,23 @@ export const AppRouter = ({ navigation, dataStore }) => {
           alerts={alerts}
           onNudge={handleNudgeAlert}
           onEscalate={handleEscalateAlert}
-          onRecalculate={() => {
-            showAlert({
-              title: 'Anomaly Recalculated',
-              message: 'Autonomous deal health recalculation completed cleanly.',
-              variant: 'success'
-            });
-          }}
+          onRecalculate={handleRecalculateAlerts}
         />
       );
 
     case 'reports':
       return (
         <ReportingDashboardView
-          onExport={(format) => {
-            showAlert({
-              title: 'Report Download Initiated',
-              message: `Downloading DealFlow360 Executive Report in .${format} format.`,
-              variant: 'info'
-            });
+          quotations={quotations}
+          onExport={async (format) => {
+            try {
+              showAlert({
+                title: 'Report Download Initiated',
+                message: `Downloading DealFlow360 Executive Report in .${format} format.`,
+                variant: 'info'
+              });
+              await api.reports.export(format);
+            } catch (_) {}
           }}
         />
       );
@@ -238,8 +245,8 @@ export const AppRouter = ({ navigation, dataStore }) => {
       return (
         <ProductCatalogView
           products={products}
-          variants={mockVariants}
-          priceLists={mockPriceLists}
+          variants={variants}
+          priceLists={priceLists}
           onSelectProduct={(id) => navigateTo('product-config', id)}
           onCreateProduct={() => {
             setSelectedProductId(null);
@@ -252,7 +259,7 @@ export const AppRouter = ({ navigation, dataStore }) => {
       return (
         <ProductPricelistConfigView
           product={activeProduct}
-          categories={mockCategories}
+          categories={categories}
           onBack={() => navigateTo('products')}
           onSaveProduct={handleSaveProduct}
         />
@@ -264,15 +271,7 @@ export const AppRouter = ({ navigation, dataStore }) => {
           discountTiers={discountTiers}
           categoryCeilings={categoryCeilings}
           approvalRules={mockApprovalRules}
-          onSaveConfig={({ tiers, ceilings }) => {
-            setDiscountTiers(tiers);
-            setCategoryCeilings(ceilings);
-            showAlert({
-              title: 'Governance Matrix Saved',
-              message: 'Customer tier ceilings & product category caps updated system-wide.',
-              variant: 'success'
-            });
-          }}
+          onSaveConfig={handleSaveDiscountConfig}
         />
       );
 

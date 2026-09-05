@@ -60,6 +60,7 @@ export const api = {
     getAll: (params = '') => request(`/quotations${params ? `?${params}` : ''}`),
     getById: (id) => request(`/quotations/${id}`),
     create: (data) => request('/quotations', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => request(`/quotations/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     createRFQ: (data) => request('/quotations/rfq', { method: 'POST', body: JSON.stringify(data) }),
     getRFQs: () => request('/quotations/rfq'),
     addLine: (id, lineData) => request(`/quotations/${id}/lines`, { method: 'POST', body: JSON.stringify(lineData) }),
@@ -78,15 +79,23 @@ export const api = {
     reject: (id, note) => request(`/approvals/${id}/reject`, { method: 'POST', body: JSON.stringify({ note }) }),
     returnForRevision: (id, note) => request(`/approvals/${id}/return-for-revision`, { method: 'POST', body: JSON.stringify({ note }) })
   },
+  warehouses: {
+    getAll: () => request('/warehouses'),
+    getAllStock: () => request('/warehouses/all-stock'),
+    getStock: (id) => request(`/warehouses/${id}/stock`),
+    updateStock: (id, data) => request(`/warehouses/${id}/stock`, { method: 'PATCH', body: JSON.stringify(data) })
+  },
   fulfillment: {
     getAll: () => request('/fulfillment'),
     getById: (id) => request(`/fulfillment/${id}`),
     acceptSplit: (id) => request(`/fulfillment/${id}/accept-suggested-split`, { method: 'POST' }),
-    manualOverride: (id, allocations) => request(`/fulfillment/${id}/manual-override`, { method: 'POST', body: JSON.stringify({ allocations }) })
+    manualOverride: (id, allocations) => request(`/fulfillment/${id}/manual-override`, { method: 'POST', body: JSON.stringify({ allocations }) }),
+    consolidateBackorder: (id) => request(`/fulfillment/${id}/consolidate-backorder`, { method: 'POST' })
   },
   subscriptions: {
     getAll: () => request('/subscriptions'),
     getPlans: () => request('/subscriptions/plans'),
+    getBillingSchedule: (id) => request(`/subscriptions/${id}/billing-schedule`),
     cancel: (id, reason) => request(`/subscriptions/${id}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) })
   },
   billing: {
@@ -96,13 +105,25 @@ export const api = {
   },
   products: {
     getAll: () => request('/products'),
+    getCategories: () => request('/products/categories'),
+    getVariants: () => request('/products/variants'),
     getById: (id) => request(`/products/${id}`),
-    create: (data) => request('/products', { method: 'POST', body: JSON.stringify(data) })
+    create: (data) => request('/products', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => request(`/products/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id) => request(`/products/${id}`, { method: 'DELETE' })
+  },
+  priceLists: {
+    getAll: () => request('/price-lists'),
+    getById: (id) => request(`/price-lists/${id}`),
+    create: (data) => request('/price-lists', { method: 'POST', body: JSON.stringify(data) })
   },
   discounts: {
     getTiers: () => request('/discount-tiers'),
     getCeilings: () => request('/discount-tiers/ceilings'),
-    createTier: (data) => request('/discount-tiers', { method: 'POST', body: JSON.stringify(data) })
+    createTier: (data) => request('/discount-tiers', { method: 'POST', body: JSON.stringify(data) }),
+    updateTier: (id, data) => request(`/discount-tiers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    createCeiling: (data) => request('/discount-tiers/ceilings', { method: 'POST', body: JSON.stringify(data) }),
+    updateCeiling: (id, data) => request(`/discount-tiers/ceilings/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
   },
   dealHealth: {
     getAlerts: () => request('/deal-health/alerts'),
@@ -111,7 +132,8 @@ export const api = {
     recalculate: () => request('/deal-health/recalculate', { method: 'POST' })
   },
   reports: {
-    getSummary: () => request('/reports/quotations')
+    getSummary: (params = '') => request(`/reports/quotations${params ? `?${params}` : ''}`),
+    export: (format = 'csv') => request(`/reports/export?format=${format}`)
   },
 
   // Direct convenience helpers

@@ -11,6 +11,14 @@ export const BillingDetailView = ({ subscription, onBack, onCancelSubscription }
 
   if (!subscription) return null;
 
+  const subId = subscription._id || subscription.id;
+  const customerName = subscription.customer_name || subscription.customer_id?.name || 'Customer';
+  const quoteNumber = subscription.quote_number || (typeof subscription.quotation_id === 'object' ? subscription.quotation_id?.quote_number : subscription.quotation_id) || 'Q-Linked';
+  const planName = subscription.plan_name || subscription.plan_id?.name || 'Enterprise Plan';
+  const cycle = subscription.cycle || subscription.plan_id?.cycle || 'monthly';
+  const nextDate = subscription.next_bill_date ? new Date(subscription.next_bill_date).toLocaleDateString() : 'Next Billing Period';
+  const amount = Number(subscription.amount || subscription.recurring_amount || subscription.plan_id?.base_fee || 0);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -21,10 +29,10 @@ export const BillingDetailView = ({ subscription, onBack, onCancelSubscription }
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Subscription: {subscription.id}</h1>
-              <Badge variant="success">{subscription.status}</Badge>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Subscription: {subId}</h1>
+              <Badge variant={subscription.status === 'Active' ? 'success' : 'danger'}>{subscription.status}</Badge>
             </div>
-            <span className="text-xs text-slate-500">Customer: {subscription.customer_name} | Origin Quote: {subscription.quotation_id}</span>
+            <span className="text-xs text-slate-500">Customer: {customerName} | Origin Quote: {quoteNumber}</span>
           </div>
         </div>
 
@@ -44,17 +52,17 @@ export const BillingDetailView = ({ subscription, onBack, onCancelSubscription }
         <Card title="Recurring Subscription Lines" subtitle="Billed automatically on cycle schedule">
           <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl space-y-3">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-900">{subscription.plan_name}</span>
-              <Badge variant="purple">{subscription.cycle}</Badge>
+              <span className="font-bold text-slate-900">{planName}</span>
+              <Badge variant="purple">{cycle}</Badge>
             </div>
             <p className="text-xs text-slate-600">Recurring enterprise software seat licenses.</p>
             <div className="flex items-center justify-between pt-2 border-t border-purple-200">
               <span className="text-xs text-slate-500">Next Billing Date:</span>
-              <span className="text-sm font-bold text-[#714B67]">{subscription.next_bill_date}</span>
+              <span className="text-sm font-bold text-[#714B67]">{nextDate}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-500">Cycle Amount:</span>
-              <span className="text-xl font-black text-slate-900">${subscription.amount.toLocaleString()} / {subscription.cycle}</span>
+              <span className="text-xl font-black text-slate-900">${amount.toLocaleString()} / {cycle}</span>
             </div>
           </div>
         </Card>
