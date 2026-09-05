@@ -7,6 +7,8 @@ export const createProductSchema = z.object({
       category_id: z.string().min(1),
       unit: z.string().default('unit'),
       tax_pct: z.number().min(0).default(0),
+      base_price: z.number().min(0).default(0),
+      stock_on_hand: z.number().optional(),
       description: z.string().optional(),
       is_subscription: z.boolean().default(false),
       recurring_cycle: z.enum(['monthly', 'quarterly', 'yearly']).nullable().optional()
@@ -31,6 +33,8 @@ export const updateProductSchema = z.object({
     category_id: z.string().optional(),
     unit: z.string().optional(),
     tax_pct: z.number().min(0).optional(),
+    base_price: z.number().min(0).optional(),
+    stock_on_hand: z.number().optional(),
     description: z.string().optional(),
     is_subscription: z.boolean().optional(),
     recurring_cycle: z.enum(['monthly', 'quarterly', 'yearly']).nullable().optional()

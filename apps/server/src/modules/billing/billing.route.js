@@ -11,6 +11,7 @@ router.use(verifyAuth);
 
 router.get('/invoices', controller.getAllInvoices);
 router.get('/invoices/:id', controller.getInvoiceById);
+router.post('/invoices/generate', requireRole(['sales_rep', 'sales_manager', 'finance_ops', 'admin']), controller.generateInvoice);
 router.post('/invoices/:id/payments', requireRole(['finance_ops', 'admin']), validate(recordPaymentSchema), controller.recordPayment);
 
 export default router;

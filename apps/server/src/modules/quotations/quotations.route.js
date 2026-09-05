@@ -15,7 +15,7 @@ router.post('/rfq', controller.createRFQ);
 router.get('/', controller.getAll);
 router.get('/:id', controller.getById);
 
-router.post('/', requireRole(['sales_rep', 'sales_manager', 'admin']), validate(createQuotationSchema), controller.create);
+router.post('/', requireRole(['sales_rep']), validate(createQuotationSchema), controller.create);
 router.patch('/:id', requireRole(['sales_rep', 'sales_manager', 'admin']), controller.update);
 
 router.post('/:id/lines', requireRole(['sales_rep', 'sales_manager', 'admin']), validate(addQuotationLineSchema), controller.addLine);

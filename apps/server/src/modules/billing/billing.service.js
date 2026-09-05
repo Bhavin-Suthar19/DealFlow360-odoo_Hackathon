@@ -75,7 +75,7 @@ export class BillingService {
     return invoice;
   }
 
-  async recordPayment(invoiceId, { amount_paid, method }) {
+  async recordPayment(invoiceId, payload = {}) {
     const invoice = await Invoice.findById(invoiceId);
     if (!invoice) {
       const err = new Error('Invoice not found');
@@ -83,10 +83,13 @@ export class BillingService {
       throw err;
     }
 
+    const amountPaid = Number(payload.amount_paid ?? payload.amount ?? 0);
+    const method = payload.method || payload.payment_method || 'bank_transfer';
+
     const payment = await Payment.create({
       invoice_id: invoiceId,
-      amount_paid,
-      method: method || 'bank_transfer',
+      amount_paid: amountPaid,
+      method,
       payment_date: new Date()
     });
 

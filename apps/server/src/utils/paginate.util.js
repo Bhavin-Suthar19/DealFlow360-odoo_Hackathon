@@ -1,10 +1,8 @@
-/**
- * Shared Pagination & Filtering Utility
- */
+
 
 export const paginate = async (model, filter = {}, options = {}) => {
   const page = Math.max(1, parseInt(options.page || 1, 10));
-  const limit = Math.max(1, Math.min(100, parseInt(options.limit || 10, 10)));
+  const limit = Math.max(1, Math.min(1000, parseInt(options.limit || 50, 10)));
   const skip = (page - 1) * limit;
 
   const sort = options.sort || { created_at: -1, createdAt: -1, _id: -1 };

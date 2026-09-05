@@ -27,3 +27,13 @@ export const recordPayment = async (req, res, next) => {
     next(err);
   }
 };
+
+export const generateInvoice = async (req, res, next) => {
+  try {
+    const quotationId = req.body?.quotation_id || req.params?.quotationId;
+    const result = await billingService.generateInvoiceFromQuotation(quotationId);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};
