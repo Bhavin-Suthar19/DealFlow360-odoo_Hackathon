@@ -13,8 +13,8 @@ import {
   LogOut,
   UserCheck,
   Building2,
-  Sun,
-  Moon
+  MessageSquare,
+  User
 } from 'lucide-react';
 
 export const MainNavbar = ({
@@ -22,82 +22,102 @@ export const MainNavbar = ({
   setActiveTab,
   currentUser,
   setCurrentUser,
-  theme,
-  onToggleTheme,
   onLogout
 }) => {
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'quotations', label: 'Quotations', icon: FileText },
-    { id: 'approvals', label: 'Approvals', icon: CheckSquare, badge: 1 },
-    { id: 'fulfillment', label: 'Fulfillment', icon: Truck },
-    { id: 'subscriptions', label: 'Subscriptions', icon: Repeat },
-    { id: 'invoices', label: 'Invoices', icon: CreditCard },
-    { id: 'deal-health', label: 'Deal Health', icon: ShieldAlert, alert: true },
-    { id: 'reports', label: 'Reports', icon: BarChart3 },
-    { id: 'products', label: 'Products', icon: Package },
-    { id: 'config', label: 'Discount Config', icon: Sliders }
+  const allNavItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['sales_rep', 'sales_manager', 'finance_ops', 'admin'] },
+    { id: 'quotations', label: 'Quotations', icon: FileText, roles: ['sales_rep', 'sales_manager', 'admin'] },
+    { id: 'approvals', label: 'Approvals', icon: CheckSquare, badge: 1, roles: ['sales_manager', 'finance_ops', 'admin'] },
+    { id: 'fulfillment', label: 'Fulfillment', icon: Truck, roles: ['finance_ops', 'admin'] },
+    { id: 'subscriptions', label: 'Subscriptions', icon: Repeat, roles: ['finance_ops', 'admin'] },
+    { id: 'invoices', label: 'Invoices', icon: CreditCard, roles: ['finance_ops', 'admin'] },
+    { id: 'deal-health', label: 'Deal Health', icon: ShieldAlert, alert: true, roles: ['sales_manager', 'admin'] },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, badge: 3, roles: ['sales_rep', 'sales_manager', 'finance_ops', 'admin'] },
+    { id: 'reports', label: 'Reports', icon: BarChart3, roles: ['sales_rep', 'sales_manager', 'finance_ops', 'admin'] },
+    { id: 'products', label: 'Products', icon: Package, roles: ['sales_rep', 'sales_manager', 'admin'] },
+    { id: 'config', label: 'Discount Config', icon: Sliders, roles: ['sales_manager', 'finance_ops', 'admin'] }
   ];
 
+  const currentRole = currentUser?.role || 'sales_rep';
+  const permittedNavItems = allNavItems.filter((item) => item.roles.includes(currentRole));
+
   return (
-    <header className="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800/80 sticky top-0 z-40 shadow-xs backdrop-blur-md transition-colors duration-200">
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs backdrop-blur-md transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo Brand */}
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-700 via-purple-600 to-indigo-500 flex items-center justify-center shadow-md shadow-purple-500/25">
+            <div className="w-9 h-9 rounded-xl bg-[#714B67] border border-[#714B67]/40 flex items-center justify-center shadow-md shadow-[#714B67]/20">
               <Building2 className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
-                DealFlow<span className="text-purple-600 dark:text-purple-400">360</span>
+              <span className="text-lg font-black tracking-tight text-slate-900">
+                DealFlow<span className="text-[#714B67]">360</span>
               </span>
-              <span className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-bold">
-                Autonomous Sales Ops
+              <span className="block text-[10px] text-[#714B67] uppercase tracking-widest font-extrabold">
+                Complete B2B Sales, Quotation & Revenue Ops Platform
               </span>
             </div>
           </div>
 
-          {/* Persona & Theme Switcher Controls */}
+          {/* Persona & Navigation Controls */}
           <div className="flex items-center gap-3">
-            {/* Theme Toggle Button */}
-            <button
-              onClick={onToggleTheme}
-              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-              className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 transition-colors cursor-pointer"
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-purple-600" />}
-            </button>
-
             {/* Persona Selector */}
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs">
-              <UserCheck className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-              <span className="text-slate-500 dark:text-slate-400 font-medium">Role:</span>
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs">
+              <UserCheck className="w-3.5 h-3.5 text-[#714B67]" />
+              <span className="text-slate-500 font-medium">Role:</span>
               <select
-                value={currentUser.role}
-                onChange={(e) => setCurrentUser({ ...currentUser, role: e.target.value })}
-                className="bg-transparent text-purple-700 dark:text-purple-300 font-bold focus:outline-none cursor-pointer"
+                value={currentRole}
+                onChange={(e) => {
+                  const newRole = e.target.value;
+                  const roleNames = {
+                    sales_rep: 'Alex Johnson',
+                    sales_manager: 'J. Rao',
+                    finance_ops: 'M. Shah',
+                    admin: 'Elena Rostova'
+                  };
+                  setCurrentUser({
+                    ...currentUser,
+                    role: newRole,
+                    name: roleNames[newRole] || currentUser.name
+                  });
+                  const nextAllowed = allNavItems.filter((i) => i.roles.includes(newRole));
+                  if (!nextAllowed.some((i) => i.id === activeTab)) {
+                    setActiveTab('dashboard');
+                  }
+                }}
+                className="bg-transparent text-[#714B67] font-bold focus:outline-none cursor-pointer"
               >
-                <option value="sales_rep" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Sales Rep (Alex)</option>
-                <option value="sales_manager" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Sales Manager (J. Rao)</option>
-                <option value="finance_ops" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Finance / Ops (M. Shah)</option>
-                <option value="admin" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Admin (Elena)</option>
+                <option value="sales_rep" className="bg-white text-slate-900">Sales Rep (Alex)</option>
+                <option value="sales_manager" className="bg-white text-slate-900">Sales Manager (J. Rao)</option>
+                <option value="finance_ops" className="bg-white text-slate-900">Finance / Ops (M. Shah)</option>
+                <option value="admin" className="bg-white text-slate-900">Admin (Elena)</option>
               </select>
             </div>
 
-            {/* User Profile */}
-            <div className="text-right hidden sm:block">
-              <span className="block text-xs font-bold text-slate-800 dark:text-slate-200">{currentUser.name}</span>
-              <span className="block text-[10px] text-purple-600 dark:text-purple-400 font-semibold uppercase tracking-wider">
-                {currentUser.role.replace('_', ' ')}
-              </span>
-            </div>
+            {/* User Profile Quick Action */}
+            <button
+              onClick={() => setActiveTab('profile')}
+              className="text-right hidden sm:block group cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-[#714B67] text-white flex items-center justify-center font-bold text-xs">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+                <div className="text-left">
+                  <span className="block text-xs font-bold text-slate-800 group-hover:text-[#714B67]">{currentUser.name}</span>
+                  <span className="block text-[10px] text-[#714B67] font-semibold uppercase tracking-wider">
+                    {currentRole.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+            </button>
 
             {/* Logout */}
             <button
               onClick={onLogout}
               title="Logout / Switch Persona"
-              className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-800 transition-colors cursor-pointer"
+              className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-rose-600 border border-slate-200 transition-colors cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -105,8 +125,8 @@ export const MainNavbar = ({
         </div>
 
         {/* Navigation Tabs */}
-        <nav className="flex items-center gap-1 overflow-x-auto py-2 no-scrollbar border-t border-slate-100 dark:border-slate-900">
-          {navItems.map((item) => {
+        <nav className="flex items-center gap-1 overflow-x-auto py-2 no-scrollbar border-t border-slate-100">
+          {permittedNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
@@ -115,11 +135,11 @@ export const MainNavbar = ({
                 onClick={() => setActiveTab(item.id)}
                 className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-purple-600 text-white shadow-sm shadow-purple-600/30 font-bold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900/60'
+                    ? 'bg-[#714B67] text-white shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                 {item.label}
                 {item.badge && (
                   <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-slate-950">

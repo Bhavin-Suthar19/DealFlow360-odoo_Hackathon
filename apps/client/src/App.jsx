@@ -18,6 +18,9 @@ import ReportingDashboardView from './views/ReportingDashboardView';
 import ProductCatalogView from './views/ProductCatalogView';
 import ProductPricelistConfigView from './views/ProductPricelistConfigView';
 import DiscountTiersSetupView from './views/DiscountTiersSetupView';
+import MessagesView from './views/MessagesView';
+import UserProfileView from './views/UserProfileView';
+import { useModal } from './context/ModalContext';
 import api from './services/api';
 
 import {
@@ -41,18 +44,7 @@ import {
 } from './data/mockData';
 
 export function App() {
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('df360_theme') || 'light';
-  });
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('df360_theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
+  const { showAlert, showConfirm } = useModal();
 
   const [currentView, setCurrentView] = useState('login'); // 'login' | 'portal' | 'dashboard' | ...
   const [currentUser, setCurrentUser] = useState(mockUsers[0]);
@@ -76,6 +68,42 @@ export function App() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState('inv-1042');
   const [selectedProductId, setSelectedProductId] = useState('prod-1');
 
+  // Navigation Helper with full browser history (back/forward) support
+  const navigateTo = (view, id = null, pushState = true) => {
+    if (id) {
+      if (view === 'quotation-detail') setSelectedQuoteId(id);
+      if (view === 'approval-detail') setSelectedApprovalId(id);
+      if (view === 'fulfillment-detail') setSelectedFulfillmentId(id);
+      if (view === 'subscription-detail') setSelectedSubscriptionId(id);
+      if (view === 'invoice-detail') setSelectedInvoiceId(id);
+      if (view === 'product-config') setSelectedProductId(id);
+    }
+    setCurrentView(view);
+
+    if (pushState) {
+      const pathHash = `#${view}${id ? `/${id}` : ''}`;
+      window.history.pushState({ view, id }, '', pathHash);
+    }
+  };
+
+  // Browser Back/Forward PopState Event Listener
+  useEffect(() => {
+    const handlePopState = (event) => {
+      if (event.state && event.state.view) {
+        navigateTo(event.state.view, event.state.id, false);
+      } else {
+        const rawHash = window.location.hash.replace('#', '');
+        const [hView, hId] = rawHash.split('/');
+        if (hView) {
+          navigateTo(hView, hId || null, false);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   // Load backend data if accessible
   useEffect(() => {
     const loadBackendData = async () => {
@@ -95,23 +123,10 @@ export function App() {
     loadBackendData();
   }, []);
 
-  // Navigation Helper
-  const navigateTo = (view, id = null) => {
-    if (id) {
-      if (view === 'quotation-detail') setSelectedQuoteId(id);
-      if (view === 'approval-detail') setSelectedApprovalId(id);
-      if (view === 'fulfillment-detail') setSelectedFulfillmentId(id);
-      if (view === 'subscription-detail') setSelectedSubscriptionId(id);
-      if (view === 'invoice-detail') setSelectedInvoiceId(id);
-      if (view === 'product-config') setSelectedProductId(id);
-    }
-    setCurrentView(view);
-  };
-
   // Handlers & State Mutations
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
-    setCurrentView('dashboard');
+    navigateTo('dashboard');
   };
 
   const handleCreateQuotation = () => {
@@ -131,7 +146,7 @@ export function App() {
     };
     setQuotations([newQuote, ...quotations]);
     setSelectedQuoteId(newQuote.id);
-    setCurrentView('quotation-detail');
+    navigateTo('quotation-detail', newQuote.id);
   };
 
   const handleSaveDraft = (updatedLines) => {
@@ -144,6 +159,11 @@ export function App() {
         return q;
       })
     );
+    showAlert({
+      title: 'Quotation Draft Saved',
+      message: 'Your quotation items and line discounts have been saved as a draft.',
+      variant: 'success'
+    });
   };
 
   const handleSubmitQuote = (updatedLines) => {
@@ -161,132 +181,218 @@ export function App() {
     const total = updatedLines.reduce((sum, l) => sum + l.qty * l.unit_price * (1 - l.discount_pct / 100), 0);
     const newStatus = isHighOrMed ? 'Pending Approval' : 'Approved';
 
-    setQuotations(
-      quotations.map((q) => {
-        if (q.id === selectedQuoteId) {
-          return { ...q, lines: updatedLines, total_amount: total, blended_risk_score: riskScore, status: newStatus };
-        }
-        return q;
-      })
-    );
+    showConfirm({
+      title: isHighOrMed ? 'Submit for Manager Approval' : 'Submit & Confirm Quotation',
+      message: isHighOrMed
+        ? `This quotation has a risk score of ${riskScore}% due to discount overages. Are you sure you want to submit it for governance approval?`
+        : `This quotation total is $${total.toLocaleString()} and compliant with all category caps. Confirm submission?`,
+      confirmText: isHighOrMed ? 'Submit for Approval' : 'Confirm & Submit',
+      variant: isHighOrMed ? 'warning' : 'success',
+      onConfirm: () => {
+        setQuotations(
+          quotations.map((q) => {
+            if (q.id === selectedQuoteId) {
+              return { ...q, lines: updatedLines, total_amount: total, blended_risk_score: riskScore, status: newStatus };
+            }
+            return q;
+          })
+        );
 
-    if (isHighOrMed) {
-      const newApproval = {
-        id: `app-${Date.now()}`,
-        quotation_id: selectedQuoteId,
-        quote_number: quotations.find((q) => q.id === selectedQuoteId)?.quote_number || 'Q-1042',
-        customer_name: 'Acme Corp',
-        customer_tier: 'Gold',
-        risk_level: riskScore > 15 ? 'HIGH' : 'MEDIUM',
-        blended_risk_score: riskScore,
-        status: 'Pending',
-        assigned_to_role: 'sales_manager',
-        assigned_user: 'J. Rao',
-        created_at: new Date().toISOString(),
-        flagged_reasons: updatedLines
-          .filter((l) => l.discount_pct > l.discount_limit_pct)
-          .map((l) => ({
-            line_item: l.product_name,
-            discount_given: l.discount_pct,
-            ceiling_limit: l.discount_limit_pct,
-            over_by: l.discount_pct - l.discount_limit_pct
-          })),
-        logs: [
-          {
-            id: `log-${Date.now()}`,
-            user: `${currentUser.name} (${currentUser.role})`,
-            action: 'Submitted',
-            date: new Date().toLocaleTimeString(),
-            note: `Submitted quote with risk score ${riskScore}%`
-          }
-        ]
-      };
-      setApprovals([newApproval, ...approvals]);
-      setSelectedApprovalId(newApproval.id);
-      setCurrentView('approval-detail');
-    } else {
-      setCurrentView('quotations');
-    }
+        if (isHighOrMed) {
+          const newApproval = {
+            id: `app-${Date.now()}`,
+            quotation_id: selectedQuoteId,
+            quote_number: quotations.find((q) => q.id === selectedQuoteId)?.quote_number || 'Q-1042',
+            customer_name: 'Acme Corp',
+            customer_tier: 'Gold',
+            risk_level: riskScore > 15 ? 'HIGH' : 'MEDIUM',
+            blended_risk_score: riskScore,
+            status: 'Pending',
+            assigned_to_role: 'sales_manager',
+            assigned_user: 'J. Rao',
+            created_at: new Date().toISOString(),
+            flagged_reasons: updatedLines
+              .filter((l) => l.discount_pct > l.discount_limit_pct)
+              .map((l) => ({
+                line_item: l.product_name,
+                discount_given: l.discount_pct,
+                ceiling_limit: l.discount_limit_pct,
+                over_by: l.discount_pct - l.discount_limit_pct
+              })),
+            logs: [
+              {
+                id: `log-${Date.now()}`,
+                user: `${currentUser.name} (${currentUser.role})`,
+                action: 'Submitted',
+                date: new Date().toLocaleTimeString(),
+                note: `Submitted quote with risk score ${riskScore}%`
+              }
+            ]
+          };
+          setApprovals([newApproval, ...approvals]);
+          setSelectedApprovalId(newApproval.id);
+          navigateTo('approval-detail', newApproval.id);
+        } else {
+          navigateTo('quotations');
+        }
+      }
+    });
   };
 
   const handleApprove = (approvalId, note) => {
-    setApprovals(
-      approvals.map((a) => {
-        if (a.id === approvalId) {
-          return {
-            ...a,
-            status: 'Approved',
-            logs: [...a.logs, { id: `log-${Date.now()}`, user: currentUser.name, action: 'Approved', date: new Date().toLocaleTimeString(), note }]
-          };
-        }
-        return a;
-      })
-    );
-
     const app = approvals.find((a) => a.id === approvalId);
-    if (app) {
-      setQuotations(
-        quotations.map((q) => (q.id === app.quotation_id ? { ...q, status: 'Approved' } : q))
-      );
-    }
-    setCurrentView('approvals');
+    showConfirm({
+      title: 'Approve Quotation',
+      message: `Are you sure you want to approve quotation ${app?.quote_number || approvalId} and advance it to fulfillment?`,
+      confirmText: 'Approve Quotation',
+      variant: 'success',
+      onConfirm: () => {
+        setApprovals(
+          approvals.map((a) => {
+            if (a.id === approvalId) {
+              return {
+                ...a,
+                status: 'Approved',
+                logs: [...a.logs, { id: `log-${Date.now()}`, user: currentUser.name, action: 'Approved', date: new Date().toLocaleTimeString(), note }]
+              };
+            }
+            return a;
+          })
+        );
+
+        if (app) {
+          setQuotations(
+            quotations.map((q) => (q.id === app.quotation_id ? { ...q, status: 'Approved' } : q))
+          );
+        }
+        navigateTo('approvals');
+      }
+    });
   };
 
   const handleReturn = (approvalId, note) => {
-    setApprovals(
-      approvals.map((a) => (a.id === approvalId ? { ...a, status: 'Returned' } : a))
-    );
     const app = approvals.find((a) => a.id === approvalId);
-    if (app) {
-      setQuotations(
-        quotations.map((q) => (q.id === app.quotation_id ? { ...q, status: 'Draft' } : q))
-      );
-    }
-    setCurrentView('approvals');
+    showConfirm({
+      title: 'Return Quotation to Sales Rep',
+      message: `Return quotation ${app?.quote_number || approvalId} back to the sales representative for revision?`,
+      confirmText: 'Return for Revision',
+      variant: 'warning',
+      onConfirm: () => {
+        setApprovals(
+          approvals.map((a) => (a.id === approvalId ? { ...a, status: 'Returned' } : a))
+        );
+        if (app) {
+          setQuotations(
+            quotations.map((q) => (q.id === app.quotation_id ? { ...q, status: 'Draft' } : q))
+          );
+        }
+        navigateTo('approvals');
+      }
+    });
   };
 
   const handleReject = (approvalId, note) => {
-    setApprovals(
-      approvals.map((a) => (a.id === approvalId ? { ...a, status: 'Rejected' } : a))
-    );
     const app = approvals.find((a) => a.id === approvalId);
-    if (app) {
-      setQuotations(
-        quotations.map((q) => (q.id === app.quotation_id ? { ...q, status: 'Rejected' } : q))
-      );
-    }
-    setCurrentView('approvals');
+    showConfirm({
+      title: 'Reject Quotation',
+      message: `Are you sure you want to reject quotation ${app?.quote_number || approvalId}? This action terminates governance processing.`,
+      confirmText: 'Reject Quotation',
+      variant: 'danger',
+      onConfirm: () => {
+        setApprovals(
+          approvals.map((a) => (a.id === approvalId ? { ...a, status: 'Rejected' } : a))
+        );
+        if (app) {
+          setQuotations(
+            quotations.map((q) => (q.id === app.quotation_id ? { ...q, status: 'Rejected' } : q))
+          );
+        }
+        navigateTo('approvals');
+      }
+    });
   };
 
   const handleAcceptSplit = (orderId) => {
-    setFulfillmentOrders(
-      fulfillmentOrders.map((fo) => (fo.id === orderId ? { ...fo, status: 'Fulfilled' } : fo))
-    );
-    setCurrentView('fulfillment');
+    showConfirm({
+      title: 'Accept Warehouse Split Allocation',
+      message: 'Confirm suggested multi-warehouse fulfillment route and lock inventory allocations?',
+      confirmText: 'Accept Split Route',
+      variant: 'success',
+      onConfirm: () => {
+        setFulfillmentOrders(
+          fulfillmentOrders.map((fo) => (fo.id === orderId ? { ...fo, status: 'Fulfilled' } : fo))
+        );
+        navigateTo('fulfillment');
+      }
+    });
   };
 
   const handleCancelSubscription = (subId, reason) => {
-    setSubscriptions(
-      subscriptions.map((s) => (s.id === subId ? { ...s, status: 'Cancelled' } : s))
-    );
+    showConfirm({
+      title: 'Cancel Active Subscription',
+      message: `Are you sure you want to cancel subscription ${subId}? An automatic mid-cycle proration credit note will be issued.`,
+      confirmText: 'Cancel & Issue Credit Note',
+      variant: 'danger',
+      onConfirm: () => {
+        setSubscriptions(
+          subscriptions.map((s) => (s.id === subId ? { ...s, status: 'Cancelled' } : s))
+        );
+        showAlert({
+          title: 'Subscription Cancelled',
+          message: 'Mid-cycle proration calculated and Credit Note auto-generated.',
+          variant: 'info'
+        });
+      }
+    });
   };
 
   const handleRecordPayment = (invId, amount) => {
-    setInvoices(
-      invoices.map((inv) => (inv.id === invId ? { ...inv, status: 'Paid', payment_stage: 'Paid' } : inv))
-    );
+    showConfirm({
+      title: 'Confirm Payment Record',
+      message: `Record payment of $${amount?.toLocaleString()} for invoice ${invId}?`,
+      confirmText: 'Confirm Payment',
+      variant: 'success',
+      onConfirm: () => {
+        setInvoices(
+          invoices.map((inv) => (inv.id === invId ? { ...inv, status: 'Paid', payment_stage: 'Paid' } : inv))
+        );
+        showAlert({
+          title: 'Payment Reconciled',
+          message: `Payment of $${amount?.toLocaleString()} recorded successfully.`,
+          variant: 'success'
+        });
+      }
+    });
   };
 
   const handleNudgeAlert = (alertId) => {
     setAlerts(
       alerts.map((al) => (al.id === alertId ? { ...al, status: 'Nudged' } : al))
     );
+    showAlert({
+      title: 'Sales Rep Nudged',
+      message: 'One-click alert notification sent to account manager for stalled deal.',
+      variant: 'success'
+    });
   };
 
   const handleEscalateAlert = (alertId) => {
-    setAlerts(
-      alerts.map((al) => (al.id === alertId ? { ...al, status: 'Escalated' } : al))
-    );
+    showConfirm({
+      title: 'Escalate Stalled Deal Anomaly',
+      message: 'Escalate this stalled deal to executive leadership and VP of Sales?',
+      confirmText: 'Escalate Deal',
+      variant: 'warning',
+      onConfirm: () => {
+        setAlerts(
+          alerts.map((al) => (al.id === alertId ? { ...al, status: 'Escalated' } : al))
+        );
+        showAlert({
+          title: 'Deal Escalated',
+          message: 'Notification escalated to VP of Sales & Executive Committee.',
+          variant: 'warning'
+        });
+      }
+    });
   };
 
   const handleSaveProduct = (prodData) => {
@@ -296,7 +402,12 @@ export function App() {
     } else {
       setProducts([...products, prodData]);
     }
-    setCurrentView('products');
+    showAlert({
+      title: 'Product Master Saved',
+      message: `Product SKU ${prodData.name} saved successfully.`,
+      variant: 'success'
+    });
+    navigateTo('products');
   };
 
   // Selected Data Finds
@@ -308,24 +419,40 @@ export function App() {
   const activeProduct = products.find((p) => p.id === selectedProductId) || products[0];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans transition-colors duration-200">
       {/* LOGIN VIEW */}
       {currentView === 'login' ? (
         <LoginView
           onLoginSuccess={handleLoginSuccess}
-          onSelectPortal={() => setCurrentView('portal')}
-          theme={theme}
-          onToggleTheme={toggleTheme}
+          onSelectPortal={() => navigateTo('portal')}
         />
       ) : currentView === 'portal' ? (
         /* CUSTOMER PORTAL VIEW */
         <CustomerPortalNegotiationView
           quote={activeQuote}
-          onSwitchToInternal={() => setCurrentView('dashboard')}
-          onSubmitNegotiation={(id, data) => alert('Negotiation request submitted to sales manager!')}
+          onSwitchToInternal={() => navigateTo('dashboard')}
+          onSubmitNegotiation={(id, data) => {
+            showAlert({
+              title: 'Proposal Submitted',
+              message: 'Negotiation counter-offer and discount request submitted to sales management.',
+              variant: 'success'
+            });
+          }}
           onConfirmQuote={(id) => {
-            setQuotations(quotations.map((q) => (q.id === id ? { ...q, status: 'Confirmed' } : q)));
-            alert('Quotation confirmed! Order routing to fulfillment.');
+            showConfirm({
+              title: 'Accept Quotation Terms',
+              message: 'Accept terms and convert quotation to a confirmed order?',
+              confirmText: 'Accept & Confirm',
+              variant: 'success',
+              onConfirm: () => {
+                setQuotations(quotations.map((q) => (q.id === id ? { ...q, status: 'Confirmed' } : q)));
+                showAlert({
+                  title: 'Quotation Confirmed',
+                  message: 'Order confirmed! Order routing to warehouse fulfillment.',
+                  variant: 'success'
+                });
+              }
+            });
           }}
         />
       ) : (
@@ -333,12 +460,10 @@ export function App() {
         <>
           <MainNavbar
             activeTab={currentView}
-            setActiveTab={setCurrentView}
+            setActiveTab={navigateTo}
             currentUser={currentUser}
             setCurrentUser={setCurrentUser}
-            onLogout={() => setCurrentView('login')}
-            theme={theme}
-            onToggleTheme={toggleTheme}
+            onLogout={() => navigateTo('login')}
           />
 
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
@@ -347,7 +472,14 @@ export function App() {
                 quotations={quotations}
                 approvals={approvals}
                 alerts={alerts}
-                onNavigate={navigateTo}
+                currentUser={currentUser}
+                onNavigate={(view, id) => {
+                  if (view === 'quotation-builder') {
+                    handleCreateQuotation();
+                  } else {
+                    navigateTo(view, id);
+                  }
+                }}
               />
             )}
 
@@ -364,7 +496,7 @@ export function App() {
                 quote={activeQuote}
                 products={products}
                 upsellRules={mockUpsellRules}
-                onBack={() => setCurrentView('quotations')}
+                onBack={() => navigateTo('quotations')}
                 onSubmitQuote={handleSubmitQuote}
                 onSaveDraft={handleSaveDraft}
               />
@@ -380,7 +512,7 @@ export function App() {
             {currentView === 'approval-detail' && (
               <ApprovalAuditDetailView
                 approval={activeApproval}
-                onBack={() => setCurrentView('approvals')}
+                onBack={() => navigateTo('approvals')}
                 onApprove={handleApprove}
                 onReturn={handleReturn}
                 onReject={handleReject}
@@ -399,13 +531,21 @@ export function App() {
             {currentView === 'fulfillment-detail' && (
               <FulfillmentSplitDetailView
                 order={activeFulfillmentOrder}
-                onBack={() => setCurrentView('fulfillment')}
+                onBack={() => navigateTo('fulfillment')}
                 onAcceptSplit={handleAcceptSplit}
                 onManualOverride={(id, splits) => {
-                  setFulfillmentOrders(
-                    fulfillmentOrders.map((fo) => (fo.id === id ? { ...fo, splits } : fo))
-                  );
-                  setCurrentView('fulfillment');
+                  showConfirm({
+                    title: 'Save Manual Allocations',
+                    message: 'Save custom manual warehouse split allocations for this order?',
+                    confirmText: 'Save Manual Override',
+                    variant: 'warning',
+                    onConfirm: () => {
+                      setFulfillmentOrders(
+                        fulfillmentOrders.map((fo) => (fo.id === id ? { ...fo, splits } : fo))
+                      );
+                      navigateTo('fulfillment');
+                    }
+                  });
                 }}
               />
             )}
@@ -420,7 +560,7 @@ export function App() {
             {currentView === 'subscription-detail' && (
               <BillingDetailView
                 subscription={activeSubscription}
-                onBack={() => setCurrentView('subscriptions')}
+                onBack={() => navigateTo('subscriptions')}
                 onCancelSubscription={handleCancelSubscription}
               />
             )}
@@ -435,7 +575,7 @@ export function App() {
             {currentView === 'invoice-detail' && (
               <InvoiceDetailView
                 invoice={activeInvoice}
-                onBack={() => setCurrentView('invoices')}
+                onBack={() => navigateTo('invoices')}
                 onRecordPayment={handleRecordPayment}
               />
             )}
@@ -445,13 +585,25 @@ export function App() {
                 alerts={alerts}
                 onNudge={handleNudgeAlert}
                 onEscalate={handleEscalateAlert}
-                onRecalculate={() => alert('Anomaly detection recalculation executed cleanly!')}
+                onRecalculate={() => {
+                  showAlert({
+                    title: 'Anomaly Recalculated',
+                    message: 'Autonomous deal health recalculation completed cleanly.',
+                    variant: 'success'
+                  });
+                }}
               />
             )}
 
             {currentView === 'reports' && (
               <ReportingDashboardView
-                onExport={(format) => alert(`Downloading DealFlow360 Executive Report in .${format} format`)}
+                onExport={(format) => {
+                  showAlert({
+                    title: 'Report Download Initiated',
+                    message: `Downloading DealFlow360 Executive Report in .${format} format.`,
+                    variant: 'info'
+                  });
+                }}
               />
             )}
 
@@ -463,7 +615,7 @@ export function App() {
                 onSelectProduct={(id) => navigateTo('product-config', id)}
                 onCreateProduct={() => {
                   setSelectedProductId(null);
-                  setCurrentView('product-config');
+                  navigateTo('product-config');
                 }}
               />
             )}
@@ -472,7 +624,7 @@ export function App() {
               <ProductPricelistConfigView
                 product={activeProduct}
                 categories={mockCategories}
-                onBack={() => setCurrentView('products')}
+                onBack={() => navigateTo('products')}
                 onSaveProduct={handleSaveProduct}
               />
             )}
@@ -485,8 +637,21 @@ export function App() {
                 onSaveConfig={({ tiers, ceilings }) => {
                   setDiscountTiers(tiers);
                   setCategoryCeilings(ceilings);
+                  showAlert({
+                    title: 'Governance Matrix Saved',
+                    message: 'Customer tier ceilings & product category caps updated system-wide.',
+                    variant: 'success'
+                  });
                 }}
               />
+            )}
+
+            {currentView === 'messages' && (
+              <MessagesView currentUser={currentUser} />
+            )}
+
+            {currentView === 'profile' && (
+              <UserProfileView currentUser={currentUser} />
             )}
           </main>
         </>

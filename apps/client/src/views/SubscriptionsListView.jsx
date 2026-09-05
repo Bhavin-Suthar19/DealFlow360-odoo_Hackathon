@@ -15,8 +15,8 @@ export const SubscriptionsListView = ({ subscriptions = [], onSelectSubscription
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Recurring Subscriptions</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Automated recurring billing schedules and mid-cycle proration</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Recurring Subscriptions</h1>
+          <p className="text-sm text-slate-500">Automated recurring billing schedules and mid-cycle proration</p>
         </div>
       </div>
 
@@ -34,8 +34,8 @@ export const SubscriptionsListView = ({ subscriptions = [], onSelectSubscription
       {/* Subscription Table */}
       <Card>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-800 dark:text-slate-300">
-            <thead className="text-xs uppercase bg-slate-50 dark:bg-slate-900/90 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+          <table className="w-full text-left text-sm text-slate-800">
+            <thead className="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-200">
               <tr>
                 <th className="py-3.5 px-4">Subscription ID</th>
                 <th className="py-3.5 px-4">Customer Name</th>
@@ -47,7 +47,7 @@ export const SubscriptionsListView = ({ subscriptions = [], onSelectSubscription
                 <th className="py-3.5 px-4 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100">
               {filteredSubs.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-500 italic">
@@ -56,13 +56,13 @@ export const SubscriptionsListView = ({ subscriptions = [], onSelectSubscription
                 </tr>
               ) : (
                 filteredSubs.map((sub) => (
-                  <tr key={sub.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                    <td className="py-3.5 px-4 font-mono text-xs text-indigo-600 dark:text-indigo-400 font-bold">{sub.id}</td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">{sub.customer_name}</td>
-                    <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200">{sub.plan_name}</td>
-                    <td className="py-3.5 px-4 uppercase text-xs font-bold text-slate-500 dark:text-slate-400">{sub.cycle}</td>
-                    <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{sub.next_bill_date}</td>
-                    <td className="py-3.5 px-4 font-black text-slate-900 dark:text-white">${sub.amount.toLocaleString()}</td>
+                  <tr key={sub.id} className="hover:bg-slate-50">
+                    <td className="py-3.5 px-4 font-mono text-xs text-[#714B67] font-bold">{sub.id}</td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-900">{sub.customer_name}</td>
+                    <td className="py-3.5 px-4 text-slate-700">{sub.plan_name}</td>
+                    <td className="py-3.5 px-4 uppercase text-xs font-bold text-slate-500">{sub.cycle}</td>
+                    <td className="py-3.5 px-4 text-slate-600">{sub.next_bill_date}</td>
+                    <td className="py-3.5 px-4 font-black text-slate-900">${sub.amount.toLocaleString()}</td>
                     <td className="py-3.5 px-4">
                       <Badge variant={sub.status === 'Active' ? 'success' : sub.status === 'Paused' ? 'warning' : 'danger'}>
                         {sub.status}

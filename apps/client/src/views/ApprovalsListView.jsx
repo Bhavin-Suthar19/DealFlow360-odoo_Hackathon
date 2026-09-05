@@ -14,13 +14,13 @@ export const ApprovalsListView = ({ approvals = [], onSelectApproval }) => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Approvals & Governance Queue</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Review flagged deals requiring manager or finance approval</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Approvals & Governance Queue</h1>
+          <p className="text-sm text-slate-500">Review flagged deals requiring manager or finance approval</p>
         </div>
       </div>
 
       {/* Filter Pills */}
-      <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
+      <div className="flex items-center gap-2 pb-2 border-b border-slate-200 overflow-x-auto">
         <Filter className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
         {['Pending', 'Returned', 'Approved', 'Rejected', 'All'].map((status) => (
           <button
@@ -28,8 +28,8 @@ export const ApprovalsListView = ({ approvals = [], onSelectApproval }) => {
             onClick={() => setFilterStatus(status)}
             className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               filterStatus === status
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-800'
+                ? 'bg-[#714B67] text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
             }`}
           >
             {status}
@@ -40,8 +40,8 @@ export const ApprovalsListView = ({ approvals = [], onSelectApproval }) => {
       {/* Table */}
       <Card>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-800 dark:text-slate-300">
-            <thead className="text-xs uppercase bg-slate-50 dark:bg-slate-900/90 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+          <table className="w-full text-left text-sm text-slate-800">
+            <thead className="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-200">
               <tr>
                 <th className="py-3.5 px-4">Quote #</th>
                 <th className="py-3.5 px-4">Customer</th>
@@ -53,7 +53,7 @@ export const ApprovalsListView = ({ approvals = [], onSelectApproval }) => {
                 <th className="py-3.5 px-4 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100">
               {filteredApprovals.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-500 italic">
@@ -62,9 +62,9 @@ export const ApprovalsListView = ({ approvals = [], onSelectApproval }) => {
                 </tr>
               ) : (
                 filteredApprovals.map((app) => (
-                  <tr key={app.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-indigo-600 dark:text-indigo-400">{app.quote_number}</td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">{app.customer_name}</td>
+                  <tr key={app.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-[#714B67]">{app.quote_number}</td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-900">{app.customer_name}</td>
                     <td className="py-3.5 px-4">
                       <Badge variant={app.customer_tier === 'Gold' ? 'warning' : 'default'}>{app.customer_tier}</Badge>
                     </td>
@@ -73,8 +73,8 @@ export const ApprovalsListView = ({ approvals = [], onSelectApproval }) => {
                         {app.risk_level}
                       </Badge>
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-slate-200">{app.blended_risk_score}%</td>
-                    <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{app.assigned_user || app.assigned_to_role}</td>
+                    <td className="py-3.5 px-4 font-bold text-slate-900">{app.blended_risk_score}%</td>
+                    <td className="py-3.5 px-4 text-slate-600">{app.assigned_user || app.assigned_to_role}</td>
                     <td className="py-3.5 px-4">
                       <Badge variant={app.status === 'Approved' ? 'success' : app.status === 'Pending' ? 'warning' : 'danger'}>
                         {app.status}

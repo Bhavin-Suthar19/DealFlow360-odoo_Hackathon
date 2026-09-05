@@ -2,7 +2,7 @@
  * DealFlow360 Backend REST API Client
  */
 
-const API_BASE = '/api';
+const API_BASE = 'http://localhost:5001/api';
 
 let authToken = localStorage.getItem('df360_token') || '';
 
@@ -31,6 +31,13 @@ const request = async (endpoint, options = {}) => {
     }
     return data;
   } catch (err) {
+    // Try fallback to local relative /api endpoint
+    try {
+      const res = await fetch(`/api${endpoint}`, { ...options, headers });
+      const data = await res.json();
+      if (res.ok) return data;
+    } catch (_) {}
+
     console.warn(`API call failed for ${endpoint}:`, err.message);
     throw err;
   }
@@ -93,7 +100,12 @@ export const api = {
   },
   reports: {
     getSummary: () => request('/reports/quotations')
-  }
+  },
+
+  // Direct convenience helpers
+  getQuotations: (params) => request(`/quotations${params ? `?${params}` : ''}`),
+  getProducts: () => request('/products'),
+  getInvoices: () => request('/billing/invoices')
 };
 
 export default api;

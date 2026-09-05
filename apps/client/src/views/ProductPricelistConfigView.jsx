@@ -33,16 +33,16 @@ export const ProductPricelistConfigView = ({ product, categories = [], onBack, o
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center gap-4">
           <Button variant="ghost" icon={ArrowLeft} onClick={onBack}>
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
               {product ? `Configure: ${product.name}` : 'Create New Product Master'}
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Set product attributes, recurring engine parameters & variants
             </p>
           </div>
@@ -62,11 +62,11 @@ export const ProductPricelistConfigView = ({ product, categories = [], onBack, o
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">Category</label>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Category</label>
                 <select
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-[#714B67]"
                 >
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -91,17 +91,17 @@ export const ProductPricelistConfigView = ({ product, categories = [], onBack, o
             </div>
 
             {/* Dynamic Subscription Toggle */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white block">Recurring Subscription Product?</span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">Drives recurring cycle billing engine</span>
+                  <span className="text-sm font-semibold text-slate-900 block">Recurring Subscription Product?</span>
+                  <span className="text-xs text-slate-500">Drives recurring cycle billing engine</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsSubscription(!isSubscription)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                    isSubscription ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-800'
+                    isSubscription ? 'bg-[#714B67]' : 'bg-slate-300'
                   }`}
                 >
                   <span
@@ -114,12 +114,12 @@ export const ProductPricelistConfigView = ({ product, categories = [], onBack, o
 
               {/* Dynamically render Recurring Frequency selector when is_subscription = true */}
               {isSubscription && (
-                <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center gap-3">
-                  <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-300">Recurring Frequency:</span>
+                <div className="pt-3 border-t border-slate-200 flex items-center gap-3">
+                  <span className="text-xs font-semibold text-[#714B67]">Recurring Frequency:</span>
                   <select
                     value={recurringCycle}
                     onChange={(e) => setRecurringCycle(e.target.value)}
-                    className="bg-white dark:bg-slate-900 border border-indigo-500/50 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white"
+                    className="bg-white border border-[#714B67]/50 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-[#714B67]"
                   >
                     <option value="monthly">Monthly Cycle</option>
                     <option value="quarterly">Quarterly Cycle</option>
@@ -130,11 +130,11 @@ export const ProductPricelistConfigView = ({ product, categories = [], onBack, o
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">Product Description</label>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">Product Description</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-xs text-slate-900 focus:outline-none focus:border-[#714B67]"
                 rows={3}
               />
             </div>
@@ -145,23 +145,23 @@ export const ProductPricelistConfigView = ({ product, categories = [], onBack, o
         <div className="space-y-4">
           <Card title="Product Attribute Variants" subtitle="Multi-attribute price adjustment matrix">
             <div className="space-y-3">
-              <div className="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-bold text-slate-900 dark:text-white block">RAM: 128GB ECC</span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">Attribute Variant</span>
+                  <span className="text-xs font-bold text-slate-900 block">RAM: 128GB ECC</span>
+                  <span className="text-[10px] text-slate-500">Attribute Variant</span>
                 </div>
                 <Badge variant="success">+$1,200</Badge>
               </div>
 
-              <div className="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-bold text-slate-900 dark:text-white block">RAM: 256GB ECC</span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">Attribute Variant</span>
+                  <span className="text-xs font-bold text-slate-900 block">RAM: 256GB ECC</span>
+                  <span className="text-[10px] text-slate-500">Attribute Variant</span>
                 </div>
                 <Badge variant="success">+$2,400</Badge>
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="mt-4 pt-3 border-t border-slate-200">
               <Button size="sm" variant="outline" icon={Plus} className="w-full">
                 Add Attribute Variant
               </Button>

@@ -2,13 +2,17 @@ import React from 'react';
 
 export const Badge = ({ children, variant = 'default', className = '' }) => {
   const variantStyles = {
-    default: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
-    primary: 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/30',
-    success: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30',
-    warning: 'bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-400 border-amber-200 dark:border-amber-500/30',
-    danger: 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/30',
-    purple: 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/30',
-    cyan: 'bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-500/30'
+    default: 'bg-slate-100 text-slate-700 border-slate-200',
+    draft: 'bg-slate-100 text-slate-600 border-slate-300',
+    pending: 'bg-amber-50 text-amber-800 border-amber-200',
+    warning: 'bg-amber-50 text-amber-800 border-amber-200',
+    negotiation: 'bg-cyan-50 text-cyan-800 border-cyan-200',
+    cyan: 'bg-cyan-50 text-cyan-800 border-cyan-200',
+    success: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    approved: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    danger: 'bg-rose-50 text-rose-800 border-rose-200',
+    brand: 'bg-[#714B67]/10 text-[#714B67] border-[#714B67]/30',
+    purple: 'bg-[#714B67]/10 text-[#714B67] border-[#714B67]/30'
   };
 
   return (
