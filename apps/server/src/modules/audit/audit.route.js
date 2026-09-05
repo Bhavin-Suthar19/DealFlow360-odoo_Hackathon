@@ -9,6 +9,6 @@ const router = Router();
 
 router.use(verifyAuth);
 
-router.get('/', requireRole(['sales_manager', 'admin']), validate(auditQuerySchema), controller.getLogs);
+router.get('/', requireRole(['sales_rep', 'sales_manager', 'finance_ops', 'admin']), validate(auditQuerySchema), controller.getLogs);
 
 export default router;

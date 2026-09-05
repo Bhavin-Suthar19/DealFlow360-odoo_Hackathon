@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
@@ -10,366 +10,567 @@ import {
   DollarSign,
   Activity,
   TrendingUp,
-  CreditCard,
-  Truck,
-  Repeat,
-  BarChart3,
-  Package,
-  Sliders,
-  Globe,
-  ArrowUpRight,
-  UserCheck
+  RefreshCw,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Clock
 } from 'lucide-react';
 
-export const DashboardView = ({ quotations = [], approvals = [], alerts = [], currentUser = {}, onNavigate }) => {
+const formatTimeAgo = (dateInput) => {
+  if (!dateInput) return 'Recently';
+  const now = new Date();
+  const date = new Date(dateInput);
+  const diffInSeconds = Math.max(0, Math.floor((now - date) / 1000));
+
+  if (diffInSeconds < 60) return 'Just now';
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  return `${diffInDays}d ago`;
+};
+
+const formatAuditAction = (log) => {
+  const action = log.action || '';
+  const entityType = log.entity_type || '';
+  const entityId = log.entity_id || '';
+  const userName = log.user_id?.name || (typeof log.user_id === 'string' && log.user_id !== 'system' ? log.user_id : 'System User');
+
+  if (action.includes('/auth/login')) {
+    return {
+      title: `${userName} authenticated on platform`,
+      subtitle: 'Session verified & RBAC token issued',
+      type: 'auth'
+    };
+  }
+  if (action.includes('/auth/signup')) {
+    return {
+      title: `New user account registered`,
+      subtitle: `Identity provisioned in MongoDB`,
+      type: 'auth'
+    };
+  }
+  if (action.includes('/quotations') && action.startsWith('POST')) {
+    return {
+      title: `${userName} created quotation draft`,
+      subtitle: `CPQ pricing rules & discount limits applied`,
+      type: 'quote'
+    };
+  }
+  if (action.includes('/quotations') && action.startsWith('PATCH')) {
+    return {
+      title: `${userName} updated quotation lines / terms`,
+      subtitle: `Recalculated margin & discount risk score`,
+      type: 'quote'
+    };
+  }
+  if (action.includes('/submit')) {
+    return {
+      title: `${userName} submitted quotation for review`,
+      subtitle: `Governance approval workflow triggered`,
+      type: 'approval'
+    };
+  }
+  if (action.includes('/approve')) {
+    return {
+      title: `${userName} approved quotation discount`,
+      subtitle: `Governance signoff recorded cleanly`,
+      type: 'approval'
+    };
+  }
+  if (action.includes('/reject')) {
+    return {
+      title: `${userName} rejected quotation governance request`,
+      subtitle: `Status updated to Rejected`,
+      type: 'danger'
+    };
+  }
+  if (action.includes('/deal-health') || action.includes('/alerts')) {
+    return {
+      title: `Deal health anomaly recalculated`,
+      subtitle: `Autonomous governance monitor active`,
+      type: 'alert'
+    };
+  }
+  if (action.includes('/notifications')) {
+    return {
+      title: `Notification sent across role hierarchy`,
+      subtitle: `Deal team alert dispatched`,
+      type: 'notif'
+    };
+  }
+
+  // Generic fallback format
+  return {
+    title: `${userName} performed ${action || 'System Mutation'}`,
+    subtitle: `Target: ${entityType} (${entityId})`,
+    type: 'default'
+  };
+};
+
+export const DashboardView = ({
+  quotations = [],
+  approvals = [],
+  alerts = [],
+  auditLogs = [],
+  currentUser = {},
+  onNavigate,
+  onRefresh
+}) => {
   const role = currentUser?.role || 'sales_rep';
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Search & Pagination States for Quotations Pipeline
+  const [quoteSearch, setQuoteSearch] = useState('');
+  const [quotePage, setQuotePage] = useState(1);
+  const quotesPerPage = 5;
+
+  // Pagination for Live Platform Activity
+  const [activityPage, setActivityPage] = useState(1);
+  const activityPerPage = 5;
+
+  const handleRefresh = async () => {
+    if (onRefresh) {
+      setIsRefreshing(true);
+      try {
+        await onRefresh();
+      } finally {
+        setTimeout(() => setIsRefreshing(false), 500);
+      }
+    }
+  };
 
   const pendingApprovalsCount = approvals.filter((a) => a.status === 'Pending').length;
-  const openQuotesCount = quotations.filter((q) => ['Draft', 'Pending Approval', 'Negotiation'].includes(q.status)).length;
+  const openQuotesCount = quotations.filter((q) =>
+    ['Draft', 'Pending Approval', 'Negotiation', 'Pending Manager Approval', 'Pending Customer Approval'].includes(q.status)
+  ).length;
   const atRiskDealsCount = alerts.filter((al) => al.status === 'Open').length;
   const totalPipelineValue = quotations.reduce((sum, q) => sum + (q.total_amount || 0), 0);
 
-  // Odoo-Style App Switcher Grid Data
-  const appModules = [
+  // Filtered Quotations
+  const filteredQuotations = quotations.filter((q) => {
+    if (!quoteSearch.trim()) return true;
+    const term = quoteSearch.toLowerCase();
+    return (
+      (q.quote_number && q.quote_number.toLowerCase().includes(term)) ||
+      (q.customer_name && q.customer_name.toLowerCase().includes(term)) ||
+      (q.status && q.status.toLowerCase().includes(term))
+    );
+  });
+
+  const totalQuotePages = Math.max(1, Math.ceil(filteredQuotations.length / quotesPerPage));
+  const paginatedQuotations = filteredQuotations.slice(
+    (quotePage - 1) * quotesPerPage,
+    quotePage * quotesPerPage
+  );
+
+  // Prepare Live Activity Feed (From live DB audit logs, or graceful defaults if newly seeded)
+  const displayLogs = auditLogs.length > 0 ? auditLogs : [
     {
-      id: 'quotations',
-      name: 'CPQ Quotations',
-      desc: 'Quote builder & discount rules',
-      icon: FileText,
-      badge: `${openQuotesCount} Active`,
-      bgColor: 'bg-indigo-50 border-indigo-200 text-indigo-600',
-      roles: ['sales_rep', 'sales_manager', 'admin']
+      _id: 'seed-log-1',
+      action: 'POST /quotations/submit',
+      entity_type: 'quotation',
+      entity_id: 'q-1042',
+      user_id: { name: 'Alex Johnson' },
+      timestamp: new Date(Date.now() - 1000 * 60 * 12)
     },
     {
-      id: 'approvals',
-      name: 'Governance Approvals',
-      desc: 'Risk scoring & escalations',
-      icon: CheckSquare,
-      badge: `${pendingApprovalsCount} Pending`,
-      bgColor: 'bg-amber-50 border-amber-200 text-amber-600',
-      roles: ['sales_manager', 'finance_ops', 'admin']
+      _id: 'seed-log-2',
+      action: 'POST /approvals/approve',
+      entity_type: 'approval',
+      entity_id: 'app-1',
+      user_id: { name: 'J. Rao' },
+      timestamp: new Date(Date.now() - 1000 * 60 * 45)
     },
     {
-      id: 'fulfillment',
-      name: 'Fulfillment & Stock',
-      desc: 'Multi-warehouse split engine',
-      icon: Truck,
-      badge: 'Stock Ready',
-      bgColor: 'bg-emerald-50 border-emerald-200 text-emerald-600',
-      roles: ['finance_ops', 'admin']
+      _id: 'seed-log-3',
+      action: 'POST /auth/login',
+      entity_type: 'auth',
+      entity_id: 'deepak',
+      user_id: { name: 'Deepak' },
+      timestamp: new Date(Date.now() - 1000 * 60 * 90)
     },
     {
-      id: 'subscriptions',
-      name: 'Subscriptions',
-      desc: 'ARR & recurring cycles',
-      icon: Repeat,
-      badge: '$412k ARR',
-      bgColor: 'bg-purple-50 border-purple-200 text-purple-600',
-      roles: ['finance_ops', 'admin']
-    },
-    {
-      id: 'invoices',
-      name: 'Billing & Invoices',
-      desc: 'Reconciliations & credit notes',
-      icon: CreditCard,
-      badge: 'Ledger Active',
-      bgColor: 'bg-blue-50 border-blue-200 text-blue-600',
-      roles: ['finance_ops', 'admin']
-    },
-    {
-      id: 'deal-health',
-      name: 'Deal Health Anomaly',
-      desc: 'Stalled deal & margin risk',
-      icon: ShieldAlert,
-      badge: `${atRiskDealsCount} Alerts`,
-      bgColor: 'bg-rose-50 border-rose-200 text-rose-600',
-      roles: ['sales_manager', 'admin']
-    },
-    {
-      id: 'reports',
-      name: 'Executive Analytics',
-      desc: 'Sales performance & compliance',
-      icon: BarChart3,
-      badge: 'Live Metrics',
-      bgColor: 'bg-teal-50 border-teal-200 text-teal-600',
-      roles: ['sales_rep', 'sales_manager', 'finance_ops', 'admin']
-    },
-    {
-      id: 'products',
-      name: 'Product Catalog',
-      desc: 'Pricelists & SKU matrix',
-      icon: Package,
-      badge: '18 SKUs',
-      bgColor: 'bg-indigo-50 border-indigo-200 text-indigo-700',
-      roles: ['sales_rep', 'sales_manager', 'admin']
-    },
-    {
-      id: 'config',
-      name: 'Discount Rules',
-      desc: 'Customer tier ceilings & caps',
-      icon: Sliders,
-      badge: 'Governance',
-      bgColor: 'bg-orange-50 border-orange-200 text-orange-600',
-      roles: ['sales_manager', 'finance_ops', 'admin']
+      _id: 'seed-log-4',
+      action: 'POST /deal-health/recalculate',
+      entity_type: 'deal-health',
+      entity_id: 'system',
+      user_id: { name: 'System Anomaly Engine' },
+      timestamp: new Date(Date.now() - 1000 * 60 * 180)
     }
   ];
 
-  const permittedApps = appModules.filter((app) => app.roles.includes(role));
+  const totalActivityPages = Math.max(1, Math.ceil(displayLogs.length / activityPerPage));
+  const paginatedLogs = displayLogs.slice(
+    (activityPage - 1) * activityPerPage,
+    activityPage * activityPerPage
+  );
 
   return (
     <div className="space-y-6">
-      {/* Compact Light Native Header */}
+      {/* Native Control Header */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="purple">Role: {role.replace('_', ' ')}</Badge>
-            <span className="text-xs text-slate-500 font-medium">Logged in as {currentUser.name || 'User'}</span>
+            <span className="text-xs text-slate-500 font-medium">
+              Logged in as {currentUser.name || 'User'}
+            </span>
           </div>
           <h1 className="text-2xl font-black tracking-tight text-slate-900">
-            {role === 'sales_rep' && 'Sales Representative Dashboard'}
+            {role === 'sales_rep' && 'Sales Representative Operations'}
             {role === 'sales_manager' && 'Sales Manager Governance Dashboard'}
-            {role === 'finance_ops' && 'Finance & Operations Control Center'}
+            {role === 'finance_ops' && 'Finance & Revenue Operations Control Center'}
             {role === 'admin' && 'System Administrator Overview'}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Real-time CPQ quotes, discount ceiling compliance, and team negotiation channels
+            Live database synchronizer for active quotations pipeline, discount compliance & platform events
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={RefreshCw}
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className={isRefreshing ? 'animate-spin' : ''}
+          >
+            {isRefreshing ? 'Syncing...' : 'Sync Live DB'}
+          </Button>
+
           {role === 'sales_rep' && (
-            <Button variant="primary" icon={Plus} onClick={() => onNavigate('quotation-builder')}>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Plus}
+              onClick={() => onNavigate('quotation-builder')}
+            >
               New Quotation
             </Button>
           )}
+
           {(role === 'sales_manager' || role === 'finance_ops' || role === 'admin') && (
-            <Button variant="secondary" icon={CheckSquare} onClick={() => onNavigate('approvals')}>
-              Review Approvals ({pendingApprovalsCount})
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={CheckSquare}
+              onClick={() => onNavigate('approvals')}
+            >
+              Approvals ({pendingApprovalsCount})
             </Button>
           )}
         </div>
       </div>
 
-      {/* Role Metric Cards Row */}
+      {/* Metric Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Quotes</span>
-            <FileText className="w-5 h-5 text-slate-400" />
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Active Pipeline Quotes
+            </span>
+            <FileText className="w-5 h-5 text-indigo-500" />
           </div>
-          <div className="mt-4 flex items-baseline justify-between">
+          <div className="mt-3 flex items-baseline justify-between">
             <span className="text-3xl font-black text-slate-900">{openQuotesCount}</span>
             <Badge variant="draft">In Progress</Badge>
           </div>
+          <div className="mt-2 text-[11px] text-slate-500 font-medium">
+            {quotations.length} total quotations in database
+          </div>
         </Card>
 
         <Card>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending Approvals</span>
-            <CheckSquare className="w-5 h-5 text-slate-400" />
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Pending Approvals
+            </span>
+            <CheckSquare className="w-5 h-5 text-amber-500" />
           </div>
-          <div className="mt-4 flex items-baseline justify-between">
+          <div className="mt-3 flex items-baseline justify-between">
             <span className="text-3xl font-black text-slate-900">{pendingApprovalsCount}</span>
-            <Badge variant="pending">Action Needed</Badge>
+            <Badge variant="pending">Action Required</Badge>
+          </div>
+          <div className="mt-2 text-[11px] text-slate-500 font-medium">
+            Risk-scored governance queue
           </div>
         </Card>
 
         <Card>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">At-Risk Deals</span>
-            <ShieldAlert className="w-5 h-5 text-slate-400" />
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              At-Risk Deals
+            </span>
+            <ShieldAlert className="w-5 h-5 text-rose-500" />
           </div>
-          <div className="mt-4 flex items-baseline justify-between">
+          <div className="mt-3 flex items-baseline justify-between">
             <span className="text-3xl font-black text-slate-900">{atRiskDealsCount}</span>
-            <Badge variant="danger">High Risk</Badge>
+            <Badge variant="danger">Health Alerts</Badge>
+          </div>
+          <div className="mt-2 text-[11px] text-slate-500 font-medium">
+            Stalled or margin anomaly detected
           </div>
         </Card>
 
         <Card>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Pipeline</span>
-            <DollarSign className="w-5 h-5 text-slate-400" />
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Total Pipeline Value
+            </span>
+            <DollarSign className="w-5 h-5 text-emerald-500" />
           </div>
-          <div className="mt-4 flex items-baseline justify-between">
-            <span className="text-3xl font-black text-slate-900">${totalPipelineValue.toLocaleString()}</span>
-            <Badge variant="brand">+14% MoM</Badge>
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-3xl font-black text-slate-900">
+              ${totalPipelineValue.toLocaleString()}
+            </span>
+            <Badge variant="brand">Live DB</Badge>
+          </div>
+          <div className="mt-2 text-[11px] text-slate-500 font-medium">
+            Aggregated order book
           </div>
         </Card>
       </div>
 
-      {/* Odoo 10-App Switcher Grid Matrix */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-black text-slate-900 tracking-tight">Integrated Sales Ops Apps</h2>
-            <p className="text-xs text-slate-500">Select a module to jump directly to workspace</p>
-          </div>
-          <Badge variant="brand">{permittedApps.length} Apps Available</Badge>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          {permittedApps.map((app) => {
-            const Icon = app.icon;
-            return (
-              <div
-                key={app.id}
-                onClick={() => onNavigate(app.id)}
-                className="bg-white border border-slate-200 p-4 rounded-xl hover:border-[#714B67] hover:shadow-sm transition-all duration-200 cursor-pointer flex flex-col justify-between group space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className={`w-9 h-9 rounded-lg border flex items-center justify-center font-bold ${app.bgColor}`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-
-                <div>
-                  <h3 className="text-xs font-bold text-slate-900 group-hover:text-[#714B67] transition-colors">
-                    {app.name}
-                  </h3>
-                  <p className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">{app.desc}</p>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-[10px] font-semibold text-slate-400">{app.badge}</span>
-                  <span className="text-[10px] font-bold text-[#714B67]">Open &rarr;</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Main Content Grid */}
+      {/* Main Content Grid: Active Quotations Pipeline & Live Platform Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Role-Specific Main Table */}
+        {/* ACTIVE QUOTATIONS PIPELINE (2 COLS) */}
         <Card
-          title={role === 'sales_manager' ? 'Governance Approvals & Risk Queue' : 'Active Quotations Pipeline'}
-          subtitle={role === 'sales_manager' ? 'Escalated deals requiring sales manager authorization' : 'Real-time status tracking & risk score engine'}
+          title={role === 'sales_manager' ? 'Discount Risk Governance Pipeline' : 'Active Quotations Pipeline'}
+          subtitle="Real-time MongoDB quote store with blended risk scoring"
           className="lg:col-span-2"
         >
+          {/* Search bar inside pipeline */}
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+              <input
+                type="text"
+                value={quoteSearch}
+                onChange={(e) => {
+                  setQuoteSearch(e.target.value);
+                  setQuotePage(1);
+                }}
+                placeholder="Search by quote #, customer or status..."
+                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#714B67] text-slate-800"
+              />
+            </div>
+            <span className="text-xs font-semibold text-slate-500">
+              Showing {paginatedQuotations.length} of {filteredQuotations.length} quotes
+            </span>
+          </div>
+
           <div className="overflow-x-auto">
-            {role === 'sales_manager' ? (
-              <table className="w-full text-left text-sm text-slate-800">
-                <thead className="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-200">
+            <table className="w-full text-left text-sm text-slate-800">
+              <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 border-b border-slate-200 font-bold tracking-wider">
+                <tr>
+                  <th className="py-2.5 px-3">Quote #</th>
+                  <th className="py-2.5 px-3">Customer</th>
+                  <th className="py-2.5 px-3">Amount</th>
+                  <th className="py-2.5 px-3">Risk Score</th>
+                  <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paginatedQuotations.length === 0 ? (
                   <tr>
-                    <th className="py-3 px-3">Quote #</th>
-                    <th className="py-3 px-3">Customer</th>
-                    <th className="py-3 px-3">Tier</th>
-                    <th className="py-3 px-3">Risk Score</th>
-                    <th className="py-3 px-3">Status</th>
-                    <th className="py-3 px-3 text-right">Action</th>
+                    <td colSpan="6" className="py-8 text-center text-xs text-slate-400">
+                      No quotations found in live database matching your query.
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {approvals.slice(0, 7).map((app) => (
-                    <tr
-                      key={app.id || app._id}
-                      className="hover:bg-slate-50 transition-colors cursor-pointer"
-                      onClick={() => onNavigate('approval-detail', app.id || app._id)}
-                    >
-                      <td className="py-3.5 px-3 font-bold text-[#714B67]">{app.quote_number}</td>
-                      <td className="py-3.5 px-3 font-medium text-slate-900">{app.customer_name}</td>
-                      <td className="py-3.5 px-3">
-                        <Badge variant="brand">{app.customer_tier || 'Gold'}</Badge>
-                      </td>
-                      <td className="py-3.5 px-3">
-                        <Badge variant={app.blended_risk_score > 15 ? 'danger' : 'warning'}>
-                          {app.blended_risk_score}%
-                        </Badge>
-                      </td>
-                      <td className="py-3.5 px-3">
-                        <Badge variant={app.status === 'Approved' ? 'success' : app.status === 'Pending' ? 'warning' : 'danger'}>
-                          {app.status}
-                        </Badge>
-                      </td>
-                      <td className="py-3.5 px-3 text-right">
-                        <span className="text-xs font-bold text-[#714B67] hover:underline">
-                          Review &rarr;
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <table className="w-full text-left text-sm text-slate-800">
-                <thead className="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-200">
-                  <tr>
-                    <th className="py-3 px-3">Quote #</th>
-                    <th className="py-3 px-3">Customer</th>
-                    <th className="py-3 px-3">Total Amount</th>
-                    <th className="py-3 px-3">Risk Score</th>
-                    <th className="py-3 px-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {quotations.slice(0, 7).map((q) => {
+                ) : (
+                  paginatedQuotations.map((q) => {
+                    const quoteId = q.id || q._id;
                     const getStatusBadge = (st) => {
                       if (st === 'Approved' || st === 'Confirmed') return <Badge variant="success">{st}</Badge>;
-                      if (st === 'Pending Manager Approval') return <Badge variant="danger">Manager Review</Badge>;
-                      if (st === 'Pending Customer Approval') return <Badge variant="purple">Customer Review</Badge>;
-                      if (st === 'Under Negotiation' || st === 'Negotiation') return <Badge variant="negotiation">Negotiation</Badge>;
-                      return <Badge variant="draft">Draft</Badge>;
+                      if (st?.includes('Approval') || st === 'Pending') return <Badge variant="pending">{st}</Badge>;
+                      if (st === 'Negotiation' || st === 'Under Negotiation') return <Badge variant="negotiation">{st}</Badge>;
+                      if (st === 'Rejected') return <Badge variant="danger">{st}</Badge>;
+                      return <Badge variant="draft">{st || 'Draft'}</Badge>;
                     };
+
+                    const riskScore = q.blended_risk_score || 0;
 
                     return (
                       <tr
-                        key={q.id || q._id}
-                        className="hover:bg-slate-50 transition-colors cursor-pointer"
-                        onClick={() => onNavigate('quotation-builder', q.id || q._id)}
+                        key={quoteId}
+                        className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                        onClick={() => onNavigate('quotation-detail', quoteId)}
                       >
-                        <td className="py-3.5 px-3 font-bold text-[#714B67]">{q.quote_number}</td>
-                        <td className="py-3.5 px-3 font-medium">{q.customer_name}</td>
-                        <td className="py-3.5 px-3 font-mono font-bold">${q.total_amount?.toLocaleString()}</td>
-                        <td className="py-3.5 px-3">
-                          <Badge variant={q.blended_risk_score > 15 ? 'danger' : q.blended_risk_score > 5 ? 'warning' : 'success'}>
-                            {q.blended_risk_score}%
+                        <td className="py-3 px-3 font-bold text-[#714B67] group-hover:underline">
+                          {q.quote_number || quoteId}
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="font-semibold text-slate-900">{q.customer_name || 'Acme Corp'}</div>
+                          {q.sales_rep_name && (
+                            <div className="text-[10px] text-slate-400">Rep: {q.sales_rep_name}</div>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 font-mono font-bold text-slate-900">
+                          ${(q.total_amount || 0).toLocaleString()}
+                        </td>
+                        <td className="py-3 px-3">
+                          <Badge
+                            variant={
+                              riskScore > 15 ? 'danger' : riskScore > 5 ? 'warning' : 'success'
+                            }
+                          >
+                            {riskScore}% Risk
                           </Badge>
                         </td>
-                        <td className="py-3.5 px-3">{getStatusBadge(q.status)}</td>
+                        <td className="py-3 px-3">{getStatusBadge(q.status)}</td>
+                        <td className="py-3 px-3 text-right">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigate('quotation-detail', quoteId);
+                            }}
+                            className="text-xs font-bold text-[#714B67] hover:underline cursor-pointer inline-flex items-center gap-1"
+                          >
+                            View &rarr;
+                          </button>
+                        </td>
                       </tr>
                     );
-                  })}
-                </tbody>
-              </table>
-            )}
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
+
+          {/* Quotation Pagination Controls */}
+          {totalQuotePages > 1 && (
+            <div className="flex items-center justify-between pt-4 mt-2 border-t border-slate-100">
+              <span className="text-xs text-slate-500 font-medium">
+                Page {quotePage} of {totalQuotePages}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  icon={ChevronsLeft}
+                  disabled={quotePage <= 1}
+                  onClick={() => setQuotePage(1)}
+                  title="First Page"
+                >
+                  First
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  icon={ChevronLeft}
+                  disabled={quotePage <= 1}
+                  onClick={() => setQuotePage((p) => Math.max(1, p - 1))}
+                  title="Previous Page"
+                >
+                  Prev
+                </Button>
+                <span className="px-2 text-xs font-bold text-[#714B67]">{quotePage} / {totalQuotePages}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  icon={ChevronRight}
+                  disabled={quotePage >= totalQuotePages}
+                  onClick={() => setQuotePage((p) => Math.min(totalQuotePages, p + 1))}
+                  title="Next Page"
+                >
+                  Next
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  icon={ChevronsRight}
+                  disabled={quotePage >= totalQuotePages}
+                  onClick={() => setQuotePage(totalQuotePages)}
+                  title="Last Page"
+                >
+                  Last
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
 
-        {/* Live Activity Feed */}
-        <Card title="Live Platform Activity" subtitle="Autonomous governance event logs">
-          <div className="space-y-4">
-            <div className="flex gap-3 pb-3 border-b border-slate-100">
-              <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 shrink-0">
-                <Activity className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-800"><span className="font-bold">Alex Johnson</span> submitted Q-1042 for manager review.</p>
-                <span className="text-[10px] text-slate-400">10 minutes ago</span>
-              </div>
-            </div>
+        {/* LIVE PLATFORM ACTIVITY (1 COL) */}
+        <Card
+          title="Live Platform Activity"
+          subtitle="Autonomous audit events & state mutations"
+        >
+          <div className="space-y-3.5">
+            {paginatedLogs.map((log) => {
+              const formatted = formatAuditAction(log);
+              const timeString = formatTimeAgo(log.timestamp);
 
-            <div className="flex gap-3 pb-3 border-b border-slate-100">
-              <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
-                <CheckSquare className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-800"><span className="font-bold">J. Rao</span> approved level 1 discount for Acme Corp.</p>
-                <span className="text-[10px] text-slate-400">45 minutes ago</span>
-              </div>
-            </div>
+              const getIconBg = (type) => {
+                if (type === 'auth') return 'bg-purple-50 border-purple-200 text-purple-600';
+                if (type === 'approval') return 'bg-emerald-50 border-emerald-200 text-emerald-600';
+                if (type === 'danger') return 'bg-rose-50 border-rose-200 text-rose-600';
+                if (type === 'alert') return 'bg-amber-50 border-amber-200 text-amber-600';
+                return 'bg-blue-50 border-blue-200 text-blue-600';
+              };
 
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
-                <TrendingUp className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-800"><span className="font-bold">Upsell Alert</span>: 24/7 SLA added to Q-1042 (+$3,500).</p>
-                <span className="text-[10px] text-slate-400">2 hours ago</span>
-              </div>
-            </div>
+              return (
+                <div
+                  key={log._id || log.id || Math.random()}
+                  className="flex items-start gap-3 pb-3 border-b border-slate-100 last:border-b-0 last:pb-0"
+                >
+                  <div
+                    className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 mt-0.5 ${getIconBg(
+                      formatted.type
+                    )}`}
+                  >
+                    <Activity className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-800 leading-tight">
+                      {formatted.title}
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                      {formatted.subtitle}
+                    </p>
+                    <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
+                      <Clock className="w-3 h-3" />
+                      <span>{timeString}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+
+          {/* Activity Pagination Controls */}
+          {totalActivityPages > 1 && (
+            <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100">
+              <span className="text-[11px] text-slate-500 font-medium">
+                {activityPage} / {totalActivityPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={activityPage <= 1}
+                  onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
+                  className="p-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={activityPage >= totalActivityPages}
+                  onClick={() => setActivityPage((p) => Math.min(totalActivityPages, p + 1))}
+                  className="p-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
     </div>

@@ -77,7 +77,9 @@ export const AppRouter = ({ navigation, dataStore }) => {
           quotations={quotations}
           approvals={approvals}
           alerts={alerts}
+          auditLogs={dataStore.auditLogs || []}
           currentUser={currentUser}
+          onRefresh={dataStore.refreshData}
           onNavigate={(view, id) => {
             if (view === 'quotation-builder') {
               if (currentUser?.role && currentUser.role !== 'sales_rep') {

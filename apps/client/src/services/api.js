@@ -148,11 +148,24 @@ export const api = {
     getSummary: (params = '') => request(`/reports/quotations${params ? `?${params}` : ''}`),
     export: (format = 'csv') => request(`/reports/export?format=${format}`)
   },
+  audit: {
+    getLogs: (params = '') => request(`/audit${params ? `?${params}` : ''}`),
+    getAll: (params = '') => request(`/audit${params ? `?${params}` : ''}`)
+  },
+  notifications: {
+    getAll: (params = '') => request(`/notifications${params ? `?${params}` : ''}`),
+    markRead: (id) => request(`/notifications/${id}/read`, { method: 'PATCH' })
+  },
 
   // Direct convenience helpers
-  getQuotations: (params) => request(`/quotations${params ? `?${params}` : ''}`),
+  getQuotations: (params = '') => request(`/quotations${params ? `?${params}` : ''}`),
+  getApprovals: (params = '') => request(`/approvals${params ? `?${params}` : ''}`),
   getProducts: () => request('/products'),
-  getInvoices: () => request('/billing/invoices')
+  getInvoices: () => request('/billing/invoices'),
+  getAlerts: (params = '') => request(`/deal-health/alerts${params ? `?${params}` : ''}`),
+  getAuditLogs: (params = '') => request(`/audit${params ? `?${params}` : ''}`),
+  getNotifications: (params = '') => request(`/notifications${params ? `?${params}` : ''}`),
+  markNotificationRead: (id) => request(`/notifications/${id}/read`, { method: 'PATCH' })
 };
 
 export default api;

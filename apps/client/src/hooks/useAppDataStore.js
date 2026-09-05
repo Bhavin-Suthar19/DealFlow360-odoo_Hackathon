@@ -73,19 +73,20 @@ export const useAppDataStore = (navigation) => {
   const [quotations, setQuotations] = useState([]);
   const [approvals, setApprovals] = useState([]);
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [variants, setVariants] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const [priceLists, setPriceLists] = useState([]);
-  const [warehouses, setWarehouses] = useState([]);
-  const [stock, setStock] = useState([]);
-  const [fulfillmentOrders, setFulfillmentOrders] = useState([]);
-  const [subscriptions, setSubscriptions] = useState([]);
-  const [invoices, setInvoices] = useState([]);
-  const [alerts, setAlerts] = useState([]);
-  const [discountTiers, setDiscountTiers] = useState([]);
-  const [categoryCeilings, setCategoryCeilings] = useState([]);
-  const [upsellRules, setUpsellRules] = useState([]);
+  const [categories, setCategories] = useState(mockCategories);
+  const [variants, setVariants] = useState(mockVariants);
+  const [priceLists, setPriceLists] = useState(mockPriceLists);
+  const [warehouses, setWarehouses] = useState(mockWarehouses);
+  const [stock, setStock] = useState(mockStock);
+  const [fulfillmentOrders, setFulfillmentOrders] = useState(mockFulfillmentOrders);
+  const [subscriptions, setSubscriptions] = useState(mockSubscriptions);
+  const [invoices, setInvoices] = useState(mockInvoices);
+  const [alerts, setAlerts] = useState(mockDealHealthAlerts);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [discountTiers, setDiscountTiers] = useState(mockDiscountTiers);
+  const [categoryCeilings, setCategoryCeilings] = useState(mockCategoryDiscountCeilings);
 
   // Active targets
   const activeQuote =
@@ -106,12 +107,12 @@ export const useAppDataStore = (navigation) => {
 
   const linkedApprovalQuote = activeApproval
     ? quotations.find(
-        (q) =>
-          q.id === activeApproval.quotation_id ||
-          q._id === activeApproval.quotation_id ||
-          (typeof activeApproval.quotation_id === 'object' && (q._id === activeApproval.quotation_id?._id || q.id === activeApproval.quotation_id?.id)) ||
-          q.quote_number === activeApproval.quote_number
-      ) || null
+      (q) =>
+        q.id === activeApproval.quotation_id ||
+        q._id === activeApproval.quotation_id ||
+        (typeof activeApproval.quotation_id === 'object' && (q._id === activeApproval.quotation_id?._id || q.id === activeApproval.quotation_id?.id)) ||
+        q.quote_number === activeApproval.quote_number
+    ) || null
     : null;
 
   const activeFulfillmentOrder = fulfillmentOrders.find((fo) => fo.id === selectedFulfillmentId || fo._id === selectedFulfillmentId) || fulfillmentOrders[0] || null;
@@ -132,6 +133,8 @@ export const useAppDataStore = (navigation) => {
         foRes,
         subRes,
         altRes,
+        auditRes,
+        notifRes,
         catRes,
         varRes,
         custRes,
@@ -149,6 +152,8 @@ export const useAppDataStore = (navigation) => {
         api.fulfillment ? api.fulfillment.getAll() : Promise.reject(),
         api.subscriptions ? api.subscriptions.getAll() : Promise.reject(),
         api.dealHealth ? api.dealHealth.getAlerts() : Promise.reject(),
+        api.audit ? api.audit.getLogs('limit=50') : api.getAuditLogs('limit=50'),
+        api.notifications ? api.notifications.getAll('limit=50') : api.getNotifications('limit=50'),
         api.products ? api.products.getCategories() : Promise.reject(),
         api.products ? api.products.getVariants() : Promise.reject(),
         api.customers ? api.customers.getAll() : Promise.reject(),
@@ -188,7 +193,13 @@ export const useAppDataStore = (navigation) => {
       if (altRes.status === 'fulfilled' && Array.isArray(altRes.value?.data)) {
         setAlerts(altRes.value.data);
       }
-      if (catRes.status === 'fulfilled' && Array.isArray(catRes.value?.data)) {
+      if (auditRes.status === 'fulfilled' && Array.isArray(auditRes.value?.data)) {
+        setAuditLogs(auditRes.value.data);
+      }
+      if (notifRes.status === 'fulfilled' && Array.isArray(notifRes.value?.data)) {
+        setNotifications(notifRes.value.data);
+      }
+      if (catRes.status === 'fulfilled' && Array.isArray(catRes.value?.data) && catRes.value.data.length > 0) {
         setCategories(catRes.value.data);
       }
       if (varRes.status === 'fulfilled' && Array.isArray(varRes.value?.data)) {
@@ -227,7 +238,7 @@ export const useAppDataStore = (navigation) => {
   const handleLogout = useCallback(async () => {
     try {
       await api.auth.logout();
-    } catch (_) {}
+    } catch (_) { }
     setAuthToken('');
     localStorage.removeItem('df360_user');
     setCurrentUser(null);
@@ -742,18 +753,18 @@ export const useAppDataStore = (navigation) => {
       prev.map((q) =>
         q.id === quoteId || q._id === quoteId
           ? {
-              ...q,
-              status: 'Under Negotiation',
-              counter_offer: {
-                counter_discount_pct: data.counter_discount_pct,
-                comment: data.comment,
-                proposed_total: data.proposed_total,
-                requested_delivery_date: data.requested_delivery_date,
-                line_discounts: data.line_discounts || {},
-                status: 'Submitted',
-                created_at: new Date().toISOString()
-              }
+            ...q,
+            status: 'Under Negotiation',
+            counter_offer: {
+              counter_discount_pct: data.counter_discount_pct,
+              comment: data.comment,
+              proposed_total: data.proposed_total,
+              requested_delivery_date: data.requested_delivery_date,
+              line_discounts: data.line_discounts || {},
+              status: 'Submitted',
+              created_at: new Date().toISOString()
             }
+          }
           : q
       )
     );
@@ -1091,7 +1102,7 @@ export const useAppDataStore = (navigation) => {
         if (id && !String(id).startsWith('tier-temp')) {
           try {
             await api.discounts.updateTier(id, { max_discount_pct: Number(t.max_discount_pct) });
-          } catch (_) {}
+          } catch (_) { }
         }
       }
       for (const c of ceilings) {
@@ -1099,7 +1110,7 @@ export const useAppDataStore = (navigation) => {
         if (id && !String(id).startsWith('ceil-temp')) {
           try {
             await api.discounts.updateCeiling(id, { max_discount_pct: Number(c.max_discount_pct) });
-          } catch (_) {}
+          } catch (_) { }
         }
       }
 
@@ -1146,6 +1157,10 @@ export const useAppDataStore = (navigation) => {
     setInvoices,
     alerts,
     setAlerts,
+    auditLogs,
+    setAuditLogs,
+    notifications,
+    setNotifications,
     discountTiers,
     setDiscountTiers,
     categoryCeilings,
