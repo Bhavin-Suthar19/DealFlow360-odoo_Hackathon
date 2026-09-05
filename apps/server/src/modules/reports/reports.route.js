@@ -9,7 +9,7 @@ const router = Router();
 
 router.use(verifyAuth);
 
-router.get('/quotations', requireRole(['sales_manager', 'finance_ops', 'admin']), validate(reportQuerySchema), controller.getQuotationReport);
-router.get('/export', requireRole(['sales_manager', 'finance_ops', 'admin']), validate(reportQuerySchema), controller.exportReport);
+router.get('/quotations', requireRole(['sales_rep', 'sales_manager', 'finance_ops', 'admin']), validate(reportQuerySchema), controller.getQuotationReport);
+router.get('/export', requireRole(['sales_rep', 'sales_manager', 'finance_ops', 'admin']), validate(reportQuerySchema), controller.exportReport);
 
 export default router;

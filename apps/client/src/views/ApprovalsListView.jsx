@@ -6,10 +6,29 @@ import Pagination from '../components/ui/Pagination';
 import usePagination from '../hooks/usePagination';
 import { ArrowRight, Filter } from 'lucide-react';
 
-export const ApprovalsListView = ({ approvals = [], onSelectApproval }) => {
-  const [filterStatus, setFilterStatus] = useState('Pending');
+export const ApprovalsListView = ({ approvals = [], quotations = [], onSelectApproval }) => {
+  const [filterStatus, setFilterStatus] = useState('New Requests');
 
-  const filteredApprovals = filterStatus === 'All' ? approvals : approvals.filter((a) => a.status === filterStatus);
+  const tabs = [
+    { id: 'New Requests', label: 'New Requests', count: approvals.filter((a) => a.status === 'Pending').length },
+    { id: 'Pending', label: 'Pending', count: approvals.filter((a) => a.status === 'Pending').length },
+    { id: 'Returned', label: 'Returned', count: approvals.filter((a) => a.status === 'Returned').length },
+    { id: 'Approved', label: 'Approved', count: approvals.filter((a) => a.status === 'Approved').length },
+    { id: 'Rejected', label: 'Rejected', count: approvals.filter((a) => a.status === 'Rejected').length },
+    { id: 'All', label: 'All Records', count: approvals.length }
+  ];
+
+  // Filter logic: 'New Requests' filters to pending inbound escalation requests sorted newest first
+  const filteredApprovals =
+    filterStatus === 'New Requests'
+      ? approvals
+          .filter((a) => a.status === 'Pending')
+          .sort((a, b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0))
+      : filterStatus === 'Pending'
+      ? approvals.filter((a) => a.status === 'Pending')
+      : filterStatus === 'All'
+      ? approvals
+      : approvals.filter((a) => a.status === filterStatus);
 
   const {
     currentPage,
@@ -37,26 +56,52 @@ export const ApprovalsListView = ({ approvals = [], onSelectApproval }) => {
         </div>
       </div>
 
-      {/* Filter Pills */}
+      {/* Filter Tabs / Pills with New Requests */}
       <div className="flex items-center gap-2 pb-2 border-b border-slate-200 overflow-x-auto">
         <Filter className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
-        {['Pending', 'Returned', 'Approved', 'Rejected', 'All'].map((status) => (
-          <button
-            key={status}
-            onClick={() => handleFilterChange(status)}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filterStatus === status
-                ? 'bg-[#714B67] text-white shadow-xs'
-                : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
-            }`}
-          >
-            {status}
-          </button>
-        ))}
+        {tabs.map((tab) => {
+          const isActive = filterStatus === tab.id;
+          const isNewRequestsTab = tab.id === 'New Requests';
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleFilterChange(tab.id)}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                isActive
+                  ? 'bg-[#714B67] text-white shadow-xs'
+                  : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {isNewRequestsTab && (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+              )}
+              <span>{tab.label}</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  isActive
+                    ? 'bg-white/25 text-white'
+                    : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Table */}
-      <Card>
+      <Card
+        title={
+          filterStatus === 'New Requests'
+            ? 'New Inbound Escalation Requests'
+            : `Governance Queue (${filterStatus})`
+        }
+        subtitle={`Showing ${filteredApprovals.length} records matching '${filterStatus}' filter`}
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-800">
             <thead className="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-200">
@@ -79,32 +124,53 @@ export const ApprovalsListView = ({ approvals = [], onSelectApproval }) => {
                   </td>
                 </tr>
               ) : (
-                paginatedApprovals.map((app) => (
-                  <tr key={app.id || app._id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-[#714B67]">{app.quote_number}</td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-900">{app.customer_name}</td>
-                    <td className="py-3.5 px-4">
-                      <Badge variant={app.customer_tier === 'Gold' ? 'warning' : 'default'}>{app.customer_tier}</Badge>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <Badge variant={app.risk_level === 'HIGH' ? 'danger' : app.risk_level === 'MEDIUM' ? 'warning' : 'success'}>
-                        {app.risk_level}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">{app.blended_risk_score}%</td>
-                    <td className="py-3.5 px-4 text-slate-600">{app.assigned_user || app.assigned_to_role}</td>
-                    <td className="py-3.5 px-4">
-                      <Badge variant={app.status === 'Approved' ? 'success' : app.status === 'Pending' ? 'warning' : 'danger'}>
-                        {app.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <Button size="sm" variant="primary" icon={ArrowRight} onClick={() => onSelectApproval(app.id || app._id)}>
-                        Review Deal
-                      </Button>
-                    </td>
-                  </tr>
-                ))
+                paginatedApprovals.map((app) => {
+                  const appId = app.id || app._id;
+                  const isNew = app.status === 'Pending';
+                  return (
+                    <tr key={appId} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-[#714B67]">
+                        <div className="flex items-center gap-1.5">
+                          {app.quote_number}
+                          {isNew && (
+                            <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded border border-amber-300">
+                              NEW
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-semibold text-slate-900">{app.customer_name}</td>
+                      <td className="py-3.5 px-4">
+                        <Badge variant={app.customer_tier === 'Gold' ? 'warning' : 'default'}>{app.customer_tier || 'Standard'}</Badge>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <Badge variant={app.risk_level === 'HIGH' ? 'danger' : app.risk_level === 'MEDIUM' ? 'warning' : 'success'}>
+                          {app.risk_level || 'MEDIUM'}
+                        </Badge>
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-slate-900">{app.blended_risk_score ?? 0}%</td>
+                      <td className="py-3.5 px-4 text-slate-600">{app.assigned_user || app.assigned_to_role || 'Sales Manager'}</td>
+                      <td className="py-3.5 px-4">
+                        <Badge
+                          variant={
+                            app.status === 'Approved'
+                              ? 'success'
+                              : app.status === 'Pending'
+                              ? 'warning'
+                              : 'danger'
+                          }
+                        >
+                          {app.status === 'Pending' ? 'New Request' : app.status}
+                        </Badge>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <Button size="sm" variant="primary" icon={ArrowRight} onClick={() => onSelectApproval(appId)}>
+                          Review Deal
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

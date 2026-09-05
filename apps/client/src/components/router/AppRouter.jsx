@@ -151,6 +151,7 @@ export const AppRouter = ({ navigation, dataStore }) => {
       return (
         <ApprovalsListView
           approvals={approvals}
+          quotations={quotations}
           onSelectApproval={(id) => navigateTo('approval-detail', id)}
         />
       );
@@ -237,11 +238,16 @@ export const AppRouter = ({ navigation, dataStore }) => {
       return (
         <ReportingDashboardView
           quotations={quotations}
+          approvals={approvals}
+          invoices={invoices}
+          products={products}
+          subscriptions={subscriptions}
+          currentUser={currentUser}
           onExport={async (format) => {
             try {
               showAlert({
                 title: 'Report Download Initiated',
-                message: `Downloading DealFlow360 Executive Report in .${format} format.`,
+                message: `Exporting DealFlow360 Executive Report in .${format} format.`,
                 variant: 'info'
               });
               await api.reports.export(format);
@@ -279,8 +285,28 @@ export const AppRouter = ({ navigation, dataStore }) => {
       );
 
     case 'config':
+      if (currentUser?.role && currentUser.role !== 'admin') {
+        return (
+          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-xs text-center max-w-lg mx-auto my-12 space-y-4">
+            <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto text-xl font-bold">
+              !
+            </div>
+            <h2 className="text-xl font-bold text-slate-900">Access Restricted</h2>
+            <p className="text-sm text-slate-600">
+              Discount tier ceilings and governance matrices can only be configured by System Administrators.
+            </p>
+            <button
+              onClick={() => navigateTo('dashboard')}
+              className="px-4 py-2 bg-[#714B67] hover:bg-[#5b3c53] text-white text-sm font-semibold rounded-lg shadow-sm transition-colors"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        );
+      }
       return (
         <DiscountTiersSetupView
+          currentUser={currentUser}
           discountTiers={discountTiers}
           categoryCeilings={categoryCeilings}
           approvalRules={[]}

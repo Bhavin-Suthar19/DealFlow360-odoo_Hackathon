@@ -10,11 +10,11 @@ const router = Router();
 router.use(verifyAuth);
 
 router.get('/', controller.getTiers);
-router.post('/', requireRole(['sales_manager', 'admin']), validate(createDiscountTierSchema), controller.createTier);
-router.patch('/:id', requireRole(['sales_manager', 'admin']), controller.updateTier);
+router.post('/', requireRole(['admin']), validate(createDiscountTierSchema), controller.createTier);
+router.patch('/:id', requireRole(['admin']), controller.updateTier);
 
 router.get('/ceilings', controller.getCategoryCeilings);
-router.post('/ceilings', requireRole(['sales_manager', 'admin']), validate(createCategoryCeilingSchema), controller.createCategoryCeiling);
-router.patch('/ceilings/:id', requireRole(['sales_manager', 'admin']), controller.updateCategoryCeiling);
+router.post('/ceilings', requireRole(['admin']), validate(createCategoryCeilingSchema), controller.createCategoryCeiling);
+router.patch('/ceilings/:id', requireRole(['admin']), controller.updateCategoryCeiling);
 
 export default router;

@@ -7,6 +7,6 @@ export const reportQuerySchema = z.object({
     approvalStatus: z.string().optional(),
     productId: z.string().optional(),
     category: z.string().optional(),
-    format: z.enum(['pdf', 'xlsx']).optional()
+    format: z.enum(['pdf', 'xlsx', 'csv']).optional()
   })
 });

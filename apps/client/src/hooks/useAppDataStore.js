@@ -1093,6 +1093,15 @@ export const useAppDataStore = (navigation) => {
   }, [loadBackendData, showAlert]);
 
   const handleSaveDiscountConfig = useCallback(async ({ tiers, ceilings }) => {
+    if (currentUser?.role && currentUser.role !== 'admin') {
+      showAlert({
+        title: 'Access Restricted',
+        message: 'Discount configuration can only be modified and saved by an Administrator.',
+        variant: 'warning'
+      });
+      return;
+    }
+
     try {
       setDiscountTiers(tiers);
       setCategoryCeilings(ceilings);
@@ -1127,7 +1136,7 @@ export const useAppDataStore = (navigation) => {
         variant: 'success'
       });
     }
-  }, [loadBackendData, showAlert]);
+  }, [currentUser, loadBackendData, showAlert]);
 
   return {
     sessionChecked,

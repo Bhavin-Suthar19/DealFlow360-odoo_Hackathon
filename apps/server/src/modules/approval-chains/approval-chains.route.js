@@ -10,7 +10,7 @@ const router = Router();
 router.use(verifyAuth);
 
 router.get('/', controller.getAll);
-router.post('/', requireRole(['sales_manager', 'admin']), validate(createApprovalChainRuleSchema), controller.create);
-router.patch('/:id', requireRole(['sales_manager', 'admin']), controller.update);
+router.post('/', requireRole(['admin']), validate(createApprovalChainRuleSchema), controller.create);
+router.patch('/:id', requireRole(['admin']), controller.update);
 
 export default router;

@@ -33,7 +33,7 @@ export const MainNavbar = ({
     { id: 'deal-health', label: 'Deal Health', icon: ShieldAlert, alert: true, roles: ['sales_manager', 'admin'] },
     { id: 'reports', label: 'Reports', icon: BarChart3, roles: ['sales_rep', 'sales_manager', 'finance_ops', 'admin'] },
     { id: 'products', label: 'Products', icon: Package, roles: ['sales_rep', 'sales_manager', 'admin'] },
-    { id: 'config', label: 'Discount Config', icon: Sliders, roles: ['sales_manager', 'finance_ops', 'admin'] }
+    { id: 'config', label: 'Discount Config', icon: Sliders, roles: ['admin'] }
   ];
 
   const currentRole = currentUser?.role || 'sales_rep';
