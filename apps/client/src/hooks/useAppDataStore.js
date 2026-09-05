@@ -36,7 +36,58 @@ export const useAppDataStore = (navigation) => {
     setCurrentView
   } = navigation;
 
-  const [currentUser, setCurrentUser] = useState(mockUsers[0]);
+  // Session restoration: try to load user from localStorage, then verify with backend
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('df360_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch { return null; }
+  });
+  const [sessionChecked, setSessionChecked] = useState(false);
+
+  // On mount: verify stored token with backend /auth/me
+  useEffect(() => {
+    const restoreSession = async () => {
+      const token = localStorage.getItem('df360_token');
+      if (!token) {
+        setSessionChecked(true);
+        return;
+      }
+
+      try {
+        const res = await api.auth.me();
+        const userData = res.data?.user || res.user;
+        if (userData) {
+          setCurrentUser(userData);
+          localStorage.setItem('df360_user', JSON.stringify(userData));
+
+          // Restore navigation from URL hash
+          const rawHash = window.location.hash.replace('#', '');
+          const [hView] = rawHash.split('/');
+          if (hView && hView !== 'login') {
+            navigateTo(hView, null, false);
+          } else if (userData.role === 'customer') {
+            navigateTo('portal', null, false);
+          } else {
+            navigateTo('dashboard', null, false);
+          }
+        } else {
+          // Token invalid, clear stored data
+          localStorage.removeItem('df360_token');
+          localStorage.removeItem('df360_user');
+          setCurrentUser(null);
+        }
+      } catch (err) {
+        // Token expired or invalid — clear and stay on login
+        localStorage.removeItem('df360_token');
+        localStorage.removeItem('df360_user');
+        setCurrentUser(null);
+      }
+      setSessionChecked(true);
+    };
+    restoreSession();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [quotations, setQuotations] = useState(mockQuotations);
   const [approvals, setApprovals] = useState(mockApprovals);
   const [products, setProducts] = useState(mockProducts);
@@ -79,6 +130,7 @@ export const useAppDataStore = (navigation) => {
       await api.auth.logout();
     } catch (_) {}
     setAuthToken('');
+    localStorage.removeItem('df360_user');
     setCurrentUser(null);
     setCurrentView('login');
     window.history.pushState({ view: 'login' }, '', '/#login');
@@ -91,6 +143,7 @@ export const useAppDataStore = (navigation) => {
 
   const handleLoginSuccess = useCallback((user) => {
     setCurrentUser(user);
+    localStorage.setItem('df360_user', JSON.stringify(user));
     if (user?.role === 'customer') {
       navigateTo('portal');
     } else {
@@ -496,6 +549,7 @@ export const useAppDataStore = (navigation) => {
   }, [setProducts, setSelectedProductId, showAlert, navigateTo]);
 
   return {
+    sessionChecked,
     currentUser,
     setCurrentUser,
     quotations,

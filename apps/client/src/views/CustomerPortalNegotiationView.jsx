@@ -6,7 +6,7 @@ import Input from '../components/ui/Input';
 import CustomerPortalNavbar from '../components/layout/CustomerPortalNavbar';
 import MessagesView from './MessagesView';
 import UserProfileView from './UserProfileView';
-import { ShieldAlert, Send, CheckCircle2, Calendar, PlusCircle, Building2 } from 'lucide-react';
+import { ShieldAlert, Send, CheckCircle2, Calendar, PlusCircle, Building2, Package } from 'lucide-react';
 import { useModal } from '../context/ModalContext';
 import { api } from '../services/api';
 
@@ -146,7 +146,7 @@ export const CustomerPortalNegotiationView = ({ quote, onLogout, onSubmitNegotia
                   <Badge variant="purple">Status: {quote.status || 'Under Negotiation'}</Badge>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  Customer Account: {quote.customer_name} (Gold Tier)
+                  Customer Account: {quote.customer_name} ({quote.customer_tier || 'Gold'} Tier)
                 </p>
               </div>
 
@@ -168,39 +168,77 @@ export const CustomerPortalNegotiationView = ({ quote, onLogout, onSubmitNegotia
               </div>
             </div>
 
-            {/* Quotation Line Items Table */}
-            <Card title="Quotation Line Items & Terms" subtitle="Review line item pricing and submit counter proposals">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-700">
-                  <thead className="text-xs uppercase bg-slate-100 text-slate-500 border-b border-slate-200">
-                    <tr>
-                      <th className="py-3.5 px-4">Item Description</th>
-                      <th className="py-3.5 px-4 text-center">Qty</th>
-                      <th className="py-3.5 px-4">Unit Price</th>
-                      <th className="py-3.5 px-4">Proposed Discount %</th>
-                      <th className="py-3.5 px-4 text-right">Line Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {quote.lines?.map((l) => (
-                      <tr key={l.id} className="hover:bg-slate-50">
-                        <td className="py-3.5 px-4 font-semibold text-slate-900">{l.product_name}</td>
-                        <td className="py-3.5 px-4 text-center font-bold">{l.qty}</td>
-                        <td className="py-3.5 px-4 font-mono">${l.unit_price?.toLocaleString()}</td>
-                        <td className="py-3.5 px-4 text-amber-600 font-bold">{l.discount_pct}%</td>
-                        <td className="py-3.5 px-4 text-right font-extrabold text-slate-900">
-                          ${(l.qty * l.unit_price * (1 - l.discount_pct / 100)).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            {/* Quotation Product List */}
+            <Card title="Products & Services in this Quotation" subtitle={`${quote.lines?.length || 0} items included in quotation ${quote.quote_number}`}>
+              {(!quote.lines || quote.lines.length === 0) ? (
+                <div className="p-8 text-center text-slate-400">
+                  <Package className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+                  <p className="text-sm font-semibold text-slate-500">No products added to this quotation yet.</p>
+                  <p className="text-xs text-slate-400 mt-1">Your sales representative will add items and send you a revised quotation.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {quote.lines.map((line, idx) => {
+                    const subtotal = line.qty * line.unit_price * (1 - (line.discount_pct || 0) / 100);
+                    const hasDiscount = (line.discount_pct || 0) > 0;
+                    return (
+                      <div key={line.id || idx} className="bg-slate-50 border border-slate-200 rounded-xl p-4 hover:border-[#714B67]/30 transition-all duration-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          {/* Product Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-bold text-[#714B67] bg-[#714B67]/10 px-2 py-0.5 rounded-md">#{idx + 1}</span>
+                              <h4 className="text-sm font-bold text-slate-900 truncate">{line.product_name}</h4>
+                              {line.is_upsell && <Badge variant="purple">Upsell</Badge>}
+                              {line.line_type === 'recurring' ? (
+                                <Badge variant="brand">Subscription</Badge>
+                              ) : (
+                                <Badge variant="draft">One-time</Badge>
+                              )}
+                            </div>
+                          </div>
 
-              <div className="mt-4 pt-4 border-t border-slate-200 flex justify-between items-center">
-                <span className="text-xs text-slate-500 font-medium">Total Net Amount:</span>
-                <span className="text-2xl font-black text-[#714B67]">${quote.total_amount?.toLocaleString()}</span>
-              </div>
+                          {/* Quantity & Price Grid */}
+                          <div className="flex items-center gap-4 flex-shrink-0">
+                            <div className="text-center px-3 py-1.5 bg-white border border-slate-200 rounded-lg">
+                              <span className="text-[10px] uppercase text-slate-400 font-bold block">Qty</span>
+                              <span className="text-base font-black text-slate-900">{line.qty}</span>
+                            </div>
+                            <div className="text-center px-3 py-1.5">
+                              <span className="text-[10px] uppercase text-slate-400 font-bold block">Unit Price</span>
+                              <span className="text-sm font-bold text-slate-700 font-mono">${line.unit_price?.toLocaleString()}</span>
+                            </div>
+                            {hasDiscount && (
+                              <div className="text-center px-3 py-1.5">
+                                <span className="text-[10px] uppercase text-slate-400 font-bold block">Discount</span>
+                                <span className="text-sm font-bold text-emerald-600">-{line.discount_pct}%</span>
+                              </div>
+                            )}
+                            <div className="text-center px-3 py-1.5 bg-[#714B67]/5 border border-[#714B67]/15 rounded-lg min-w-[100px]">
+                              <span className="text-[10px] uppercase text-[#714B67] font-bold block">Subtotal</span>
+                              <span className="text-base font-black text-[#714B67]">${subtotal.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Summary Footer */}
+                  <div className="mt-4 pt-4 border-t-2 border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-4">
+                      <span className="text-xs text-slate-500 font-medium">
+                        {quote.lines.length} product{quote.lines.length !== 1 ? 's' : ''} •
+                        {' '}{quote.lines.reduce((sum, l) => sum + l.qty, 0)} total units
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-slate-500">Total Net Amount:</span>
+                      <span className="text-2xl font-black text-[#714B67]">${quote.total_amount?.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </Card>
 
             {/* Counter Negotiation Form */}

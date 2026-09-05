@@ -48,6 +48,7 @@ export const api = {
     login: (credentials) => request('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
     signup: (userData) => request('/auth/signup', { method: 'POST', body: JSON.stringify(userData) }),
     refresh: () => request('/auth/refresh', { method: 'POST' }),
+    me: () => request('/auth/me'),
     portalLogin: (credentials) => request('/auth/portal/login', { method: 'POST', body: JSON.stringify(credentials) }),
     logout: () => request('/auth/logout', { method: 'POST' })
   },

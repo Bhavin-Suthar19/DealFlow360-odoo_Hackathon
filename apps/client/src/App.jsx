@@ -5,6 +5,7 @@ import CustomerPortalNegotiationView from './views/CustomerPortalNegotiationView
 import AppRouter from './components/router/AppRouter';
 import useNavigation from './hooks/useNavigation';
 import useAppDataStore from './hooks/useAppDataStore';
+import { Building2 } from 'lucide-react';
 
 export function App() {
   const navigation = useNavigation('login');
@@ -12,6 +13,7 @@ export function App() {
 
   const { currentView, navigateTo } = navigation;
   const {
+    sessionChecked,
     currentUser,
     setCurrentUser,
     activeQuote,
@@ -21,9 +23,24 @@ export function App() {
     onConfirmQuote
   } = dataStore;
 
+  // Show a branded loading screen while verifying stored session
+  if (!sessionChecked) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#714B67] shadow-xl shadow-[#714B67]/20 animate-pulse">
+          <Building2 className="w-8 h-8 text-white" />
+        </div>
+        <p className="text-sm font-semibold text-slate-500 animate-pulse">Restoring session…</p>
+      </div>
+    );
+  }
+
+  // If no user is authenticated, always show login
+  const showLogin = !currentUser || currentView === 'login';
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans transition-colors duration-200">
-      {currentView === 'login' ? (
+      {showLogin ? (
         <LoginView onLoginSuccess={handleLoginSuccess} />
       ) : currentView === 'portal' ? (
         <CustomerPortalNegotiationView
@@ -52,3 +69,4 @@ export function App() {
 }
 
 export default App;
+
