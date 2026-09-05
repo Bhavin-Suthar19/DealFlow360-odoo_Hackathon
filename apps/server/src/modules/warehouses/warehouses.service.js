@@ -62,6 +62,24 @@ export class WarehousesService {
     await stock.save();
     return stock;
   }
+
+  async getAllStock() {
+    const stocks = await WarehouseStock.find()
+      .populate('warehouse_id', 'name shipping_weight location')
+      .populate('product_id', 'name sku base_price');
+
+    return stocks.map((st) => ({
+      id: st._id,
+      _id: st._id,
+      warehouse_id: st.warehouse_id?._id || st.warehouse_id,
+      warehouse_name: st.warehouse_id?.name || 'Main Warehouse',
+      product_id: st.product_id?._id || st.product_id,
+      product_name: st.product_id?.name || 'Product',
+      qty_in_stock: st.qty_in_stock || 0,
+      qty_reserved: st.qty_reserved || 0,
+      qty_available: Math.max(0, (st.qty_in_stock || 0) - (st.qty_reserved || 0))
+    }));
+  }
 }
 
 export const warehousesService = new WarehousesService();

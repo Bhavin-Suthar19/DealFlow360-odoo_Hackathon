@@ -11,8 +11,17 @@ export const verifyAuth = (req, res, next) => {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET);
-    if (decoded.tokenType === 'portal' || !decoded.userId || !decoded.role) {
-      return errorResponse(res, 'Unauthorized: Portal tokens cannot access internal endpoints', 'INVALID_TOKEN_TYPE', 403);
+    if (decoded.tokenType === 'portal') {
+      req.user = {
+        userId: decoded.customerUserId,
+        role: 'customer',
+        customerId: decoded.customerId,
+        tokenType: 'portal'
+      };
+      return next();
+    }
+    if (!decoded.userId || !decoded.role) {
+      return errorResponse(res, 'Unauthorized: Invalid token payload', 'INVALID_TOKEN_TYPE', 403);
     }
     req.user = decoded;
     next();

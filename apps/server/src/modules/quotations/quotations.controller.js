@@ -28,6 +28,15 @@ export const create = async (req, res, next) => {
   }
 };
 
+export const update = async (req, res, next) => {
+  try {
+    const result = await quotationsService.update(req.params.id, req.body, req.user);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const addLine = async (req, res, next) => {
   try {
     const result = await quotationsService.addLine(req.params.id, req.body, req.user);

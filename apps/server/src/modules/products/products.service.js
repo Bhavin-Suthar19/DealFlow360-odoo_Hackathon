@@ -113,6 +113,14 @@ export class ProductsService {
     await ProductVariant.deleteOne({ _id: variantId });
     return { message: 'Variant deleted successfully' };
   }
+
+  async getCategories() {
+    return Category.find().sort({ name: 1 });
+  }
+
+  async getAllVariants() {
+    return ProductVariant.find().populate('product_id', 'name');
+  }
 }
 
 export const productsService = new ProductsService();

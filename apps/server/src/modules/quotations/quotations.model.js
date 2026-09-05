@@ -27,7 +27,13 @@ const quotationSchema = new mongoose.Schema(
       default: 'Draft'
     },
     blended_risk_score: { type: Number, required: true, default: 0 },
-    total_amount: { type: Number, required: true, default: 0 }
+    total_amount: { type: Number, required: true, default: 0 },
+    counter_discount_pct: { type: Number, default: null },
+    counter_comment: { type: String, default: null },
+    counter_proposed_total: { type: Number, default: null },
+    counter_delivery_date: { type: Date, default: null },
+    counter_line_discounts: { type: mongoose.Schema.Types.Mixed, default: null },
+    counter_status: { type: String, enum: ['Pending', 'Accepted', 'Rejected', null], default: null }
   },
   {
     timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },

@@ -45,3 +45,12 @@ export const updateStock = async (req, res, next) => {
     next(err);
   }
 };
+
+export const getAllStock = async (req, res, next) => {
+  try {
+    const result = await warehousesService.getAllStock();
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};

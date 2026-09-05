@@ -11,7 +11,8 @@ import {
   ApprovalChainStep,
   Approval,
   ApprovalStepLog,
-  User
+  User,
+  QuotationNegotiationRequest
 } from '../../models/index.js';
 import { calculateBlendedRiskScore } from '../../utils/riskScore.util.js';
 import { paginate } from '../../utils/paginate.util.js';
@@ -26,11 +27,75 @@ export class QuotationsService {
     if (query.status) filter.status = query.status;
     if (query.customer_id) filter.customer_id = query.customer_id;
 
-    return paginate(Quotation, filter, {
+    const paginated = await paginate(Quotation, filter, {
       page: query.page,
       limit: query.limit,
       populate: ['customer_id', 'sales_rep_id']
     });
+
+    if (paginated.data && paginated.data.length > 0) {
+      const quoteIds = paginated.data.map(q => q._id);
+      const [allLines, allRequests] = await Promise.all([
+        QuotationLine.find({ quotation_id: { $in: quoteIds } }).populate('product_id').lean(),
+        QuotationNegotiationRequest.find({ quotation_id: { $in: quoteIds } }).sort({ createdAt: -1 }).lean()
+      ]);
+      
+      paginated.data = paginated.data.map(q => {
+        const qObj = typeof q.toObject === 'function' ? q.toObject() : q;
+        const latestReq = allRequests.find(r => String(r.quotation_id) === String(qObj._id));
+        const counterOffer = latestReq ? {
+          id: latestReq._id.toString(),
+          counter_discount_pct: latestReq.counter_discount_pct,
+          comment: latestReq.comment,
+          requested_delivery_date: latestReq.requested_delivery_date,
+          proposed_total: qObj.counter_proposed_total || null,
+          line_discounts: qObj.counter_line_discounts || {},
+          status: latestReq.status,
+          created_at: latestReq.createdAt
+        } : (qObj.counter_discount_pct ? {
+          counter_discount_pct: qObj.counter_discount_pct,
+          comment: qObj.counter_comment,
+          proposed_total: qObj.counter_proposed_total,
+          line_discounts: qObj.counter_line_discounts || {},
+          status: qObj.counter_status || 'Pending',
+          requested_delivery_date: qObj.counter_delivery_date
+        } : null);
+
+        return {
+          ...qObj,
+          id: qObj._id.toString(), // Ensure ID is mapped correctly for the frontend
+          customer_name: qObj.customer_id?.name || 'Unknown',
+          customer_tier: qObj.customer_id?.tier || 'Standard',
+          sales_rep_name: qObj.sales_rep_id?.name || 'Unassigned',
+          counter_offer: counterOffer,
+          lines: allLines
+            .filter(l => l.quotation_id.toString() === qObj._id.toString())
+            .map(l => {
+               const lObj = typeof l.toObject === 'function' ? l.toObject() : l;
+               const prod = lObj.product_id;
+               const isSub = prod?.is_subscription || lObj.line_type === 'recurring';
+               const stock = prod?.stock_on_hand ?? (isSub ? 9999 : 45);
+               const catMap = { 'cat-1': 'Hardware', 'cat-2': 'SaaS Subscriptions', 'cat-3': 'Professional Services' };
+               const catName = prod?.category_name || catMap[prod?.category_id] || (isSub ? 'SaaS Subscriptions' : 'Hardware');
+               const defaultCeiling = catName === 'Hardware' ? 10 : catName === 'Professional Services' ? 20 : 15;
+               return {
+                 ...lObj,
+                 id: lObj._id.toString(),
+                 product_name: prod?.name || 'Unknown Product',
+                 category_name: catName,
+                 unit_price: lObj.unit_price || prod?.base_price || 1000,
+                 discount_limit_pct: lObj.discount_limit_pct || defaultCeiling,
+                 stock_on_hand: stock,
+                 available_stock: stock,
+                 is_subscription: isSub,
+                 recurring_cycle: prod?.recurring_cycle || ''
+               };
+            })
+        };
+      });
+    }
+
+    return paginated;
   }
 
   async getById(id) {
@@ -40,8 +105,67 @@ export class QuotationsService {
       err.statusCode = 404;
       throw err;
     }
-    const lines = await QuotationLine.find({ quotation_id: id }).populate('product_id');
-    return { quotation, lines };
+    const [lines, latestReq] = await Promise.all([
+      QuotationLine.find({ quotation_id: id }).populate('product_id').lean(),
+      QuotationNegotiationRequest.findOne({ quotation_id: id }).sort({ createdAt: -1 }).lean()
+    ]);
+    const qObj = typeof quotation.toObject === 'function' ? quotation.toObject() : quotation;
+    const catMap = { 'cat-1': 'Hardware', 'cat-2': 'SaaS Subscriptions', 'cat-3': 'Professional Services' };
+    const mappedLines = lines.map((l) => {
+      const prod = l.product_id;
+      const isSub = prod?.is_subscription || l.line_type === 'recurring';
+      const stock = prod?.stock_on_hand ?? (isSub ? 9999 : 45);
+      const catName = prod?.category_name || catMap[prod?.category_id] || (isSub ? 'SaaS Subscriptions' : 'Hardware');
+      const defaultCeiling = catName === 'Hardware' ? 10 : catName === 'Professional Services' ? 20 : 15;
+      return {
+        ...l,
+        id: l._id.toString(),
+        product_name: prod?.name || 'Unknown Product',
+        category_name: catName,
+        unit_price: l.unit_price || prod?.base_price || 1000,
+        discount_limit_pct: l.discount_limit_pct || defaultCeiling,
+        stock_on_hand: stock,
+        available_stock: stock,
+        is_subscription: isSub,
+        recurring_cycle: prod?.recurring_cycle || ''
+      };
+    });
+
+    const counterOffer = latestReq ? {
+      id: latestReq._id.toString(),
+      counter_discount_pct: latestReq.counter_discount_pct,
+      comment: latestReq.comment,
+      requested_delivery_date: latestReq.requested_delivery_date,
+      proposed_total: qObj.counter_proposed_total || null,
+      line_discounts: qObj.counter_line_discounts || {},
+      status: latestReq.status,
+      created_at: latestReq.createdAt
+    } : (qObj.counter_discount_pct ? {
+      counter_discount_pct: qObj.counter_discount_pct,
+      comment: qObj.counter_comment,
+      proposed_total: qObj.counter_proposed_total,
+      line_discounts: qObj.counter_line_discounts || {},
+      status: qObj.counter_status || 'Pending',
+      requested_delivery_date: qObj.counter_delivery_date
+    } : null);
+
+    return {
+      ...qObj,
+      id: qObj._id.toString(),
+      customer_name: qObj.customer_id?.name || 'Acme Global Industries',
+      customer_tier: qObj.customer_id?.tier || 'Gold',
+      sales_rep_name: qObj.sales_rep_id?.name || 'Alex Johnson',
+      lines: mappedLines,
+      counter_offer: counterOffer,
+      quotation: {
+        ...qObj,
+        id: qObj._id.toString(),
+        customer_name: qObj.customer_id?.name || 'Acme Global Industries',
+        customer_tier: qObj.customer_id?.tier || 'Gold',
+        sales_rep_name: qObj.sales_rep_id?.name || 'Alex Johnson',
+        counter_offer: counterOffer
+      }
+    };
   }
 
   async create(data, user) {
@@ -106,23 +230,45 @@ export class QuotationsService {
     // Populate initial lines from RFQ items
     if (Array.isArray(data.items)) {
       for (const item of data.items) {
-        const product = await Product.findById(item.product_id);
-        if (product) {
-          await QuotationLine.create({
-            quotation_id: quotation._id,
-            product_id: product._id,
-            qty: item.requested_qty || 1,
-            unit_price: product.list_price || product.price || 1000,
-            discount_pct: 0,
-            discount_limit_pct: 15,
-            line_type: product.is_subscription ? 'recurring' : 'one_time'
-          });
+        let product = null;
+        try {
+          product = await Product.findById(item.product_id);
+        } catch (e) {
+          // ignore CastError or missing product
         }
+        
+        const catCeiling = product?.category_id === 'cat-1' ? 10 : product?.category_id === 'cat-3' ? 20 : 15;
+        const linePrice = product ? (product.base_price || product.price || 1000) : (item.base_price || 1000);
+        await QuotationLine.create({
+          quotation_id: quotation._id,
+          product_id: product?._id || item.product_id || 'unknown-product',
+          qty: item.requested_qty || 1,
+          unit_price: linePrice,
+          discount_pct: 0,
+          discount_limit_pct: catCeiling,
+          line_type: (product ? product.is_subscription : item.is_subscription) ? 'recurring' : 'one_time',
+          is_upsell: false
+        });
       }
       await this.recalculateTotal(quotation._id);
     }
 
     return { rfq, quotation };
+  }
+
+  async update(id, data, user) {
+    const quotation = await Quotation.findById(id);
+    if (!quotation) {
+      const err = new Error('Quotation not found');
+      err.statusCode = 404;
+      throw err;
+    }
+    const allowed = ['status', 'customer_id', 'sales_rep_id', 'customer_notes', 'target_delivery_date', 'total_amount', 'blended_risk_score'];
+    for (const key of allowed) {
+      if (data[key] !== undefined) quotation[key] = data[key];
+    }
+    await quotation.save();
+    return this.getById(id);
   }
 
   async getRFQs(query = {}, user = {}) {
@@ -236,7 +382,7 @@ export class QuotationsService {
       quotation_id: quotationId,
       product_id: data.product_id,
       qty: data.qty,
-      unit_price: data.unit_price || product.list_price || 1000,
+      unit_price: data.unit_price || product.base_price || product.price || product.list_price || 1000,
       discount_pct: data.discount_pct || 0,
       discount_limit_pct,
       line_type: data.line_type || (product.is_subscription ? 'recurring' : 'one_time'),

@@ -10,6 +10,7 @@ const router = Router();
 router.use(verifyAuth);
 
 router.get('/', controller.getAll);
+router.get('/all-stock', controller.getAllStock);
 router.post('/', requireRole(['finance_ops', 'admin']), validate(createWarehouseSchema), controller.create);
 router.patch('/:id', requireRole(['finance_ops', 'admin']), controller.update);
 

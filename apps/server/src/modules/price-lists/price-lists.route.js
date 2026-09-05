@@ -11,7 +11,7 @@ router.use(verifyAuth);
 
 router.get('/', priceListsController.getAll);
 router.get('/:id', priceListsController.getById);
-router.post('/', requireRole(['admin']), validate(createPriceListSchema), priceListsController.create);
-router.post('/:id/items', requireRole(['admin']), validate(addPriceListItemSchema), priceListsController.addItem);
+router.post('/', requireRole(['sales_manager', 'finance_ops', 'admin']), validate(createPriceListSchema), priceListsController.create);
+router.post('/:id/items', requireRole(['sales_manager', 'finance_ops', 'admin']), validate(addPriceListItemSchema), priceListsController.addItem);
 
 export default router;

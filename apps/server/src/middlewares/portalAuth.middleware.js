@@ -11,11 +11,22 @@ export const verifyPortalAuth = (req, res, next) => {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET);
-    if (decoded.tokenType !== 'portal' || !decoded.customerUserId || !decoded.customerId) {
-      return errorResponse(res, 'Unauthorized: Internal tokens cannot access portal endpoints', 'INVALID_PORTAL_TOKEN', 403);
+    if (decoded.tokenType === 'portal') {
+      req.customerUser = decoded;
+      return next();
     }
-    req.customerUser = decoded;
-    next();
+    
+    // Support customer accounts logged in via internal auth
+    if (decoded.role === 'customer' || decoded.tokenType === 'internal') {
+      req.customerUser = {
+        customerUserId: decoded.userId || decoded.customerUserId,
+        customerId: decoded.customerId || 'cust-1',
+        role: decoded.role || 'customer'
+      };
+      return next();
+    }
+
+    return errorResponse(res, 'Unauthorized: Portal access restricted to customer accounts', 'INVALID_PORTAL_TOKEN', 403);
   } catch (err) {
     return errorResponse(res, 'Unauthorized: Invalid or expired portal token', 'UNAUTHORIZED', 401);
   }

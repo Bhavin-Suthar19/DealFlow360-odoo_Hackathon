@@ -13,7 +13,8 @@ const userSchema = new mongoose.Schema(
       required: true,
       index: true
     },
-    team_id: { type: String, ref: 'Team', default: null }
+    team_id: { type: String, ref: 'Team', default: null },
+    customer_id: { type: String, ref: 'Customer', default: null }
   },
   {
     timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },

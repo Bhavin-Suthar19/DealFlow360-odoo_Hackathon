@@ -72,3 +72,22 @@ export const deleteVariant = async (req, res, next) => {
     next(err);
   }
 };
+
+export const getCategories = async (req, res, next) => {
+  try {
+    const result = await productsService.getCategories();
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getAllVariants = async (req, res, next) => {
+  try {
+    const result = await productsService.getAllVariants();
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
