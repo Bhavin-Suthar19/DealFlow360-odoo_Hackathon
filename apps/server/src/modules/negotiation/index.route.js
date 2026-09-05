@@ -1,1 +1,2 @@
-export { default } from './negotiation.route.js';
+import negotiationRoutes from './negotiation.route.js';
+export default negotiationRoutes;

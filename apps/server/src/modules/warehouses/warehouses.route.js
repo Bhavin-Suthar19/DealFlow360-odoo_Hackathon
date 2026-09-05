@@ -1,12 +1,19 @@
 import { Router } from 'express';
-import { getWarehousess, getWarehousesById, createWarehouses } from './warehouses.controller.js';
+import * as controller from './warehouses.controller.js';
+import { verifyAuth } from '../../middlewares/auth.middleware.js';
+import { requireRole } from '../../middlewares/rbac.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
-import { createWarehousesSchema } from './warehouses.validation.js';
+import { createWarehouseSchema, updateStockSchema } from './warehouses.validation.js';
 
 const router = Router();
 
-router.get('/', getWarehousess);
-router.get('/:id', getWarehousesById);
-router.post('/', validate(createWarehousesSchema), createWarehouses);
+router.use(verifyAuth);
+
+router.get('/', controller.getAll);
+router.post('/', requireRole(['finance_ops', 'admin']), validate(createWarehouseSchema), controller.create);
+router.patch('/:id', requireRole(['finance_ops', 'admin']), controller.update);
+
+router.get('/:id/stock', controller.getStock);
+router.patch('/:id/stock', requireRole(['finance_ops', 'admin']), validate(updateStockSchema), controller.updateStock);
 
 export default router;

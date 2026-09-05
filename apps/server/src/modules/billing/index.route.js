@@ -1,1 +1,2 @@
-export { default } from './billing.route.js';
+import billingRoutes from './billing.route.js';
+export default billingRoutes;

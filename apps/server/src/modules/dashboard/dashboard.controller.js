@@ -1,17 +1,38 @@
-import { dashboardService } from './dashboard.service.js';
-import { asyncHandler } from '../../shared/utils/asyncHandler.js';
+import dashboardService from './dashboard.service.js';
+import { successResponse } from '../../utils/apiResponse.util.js';
 
-export const getDashboards = asyncHandler(async (req, res) => {
-  const result = await dashboardService.getAll();
-  res.json({ success: true, data: result });
-});
+export const getAlerts = async (req, res, next) => {
+  try {
+    const result = await dashboardService.getAlerts(req.query);
+    return successResponse(res, result.data, result.meta);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const getDashboardById = asyncHandler(async (req, res) => {
-  const result = await dashboardService.getById(req.params.id);
-  res.json({ success: true, data: result });
-});
+export const escalateAlert = async (req, res, next) => {
+  try {
+    const result = await dashboardService.escalateAlert(req.params.id, req.body.detail);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const createDashboard = asyncHandler(async (req, res) => {
-  const result = await dashboardService.create(req.body);
-  res.status(201).json({ success: true, data: result });
-});
+export const nudgeAlert = async (req, res, next) => {
+  try {
+    const result = await dashboardService.nudgeAlert(req.params.id, req.body.detail);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const recalculate = async (req, res, next) => {
+  try {
+    const result = await dashboardService.runDetection();
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};

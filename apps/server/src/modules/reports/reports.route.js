@@ -1,12 +1,15 @@
 import { Router } from 'express';
-import { getReportss, getReportsById, createReports } from './reports.controller.js';
+import * as controller from './reports.controller.js';
+import { verifyAuth } from '../../middlewares/auth.middleware.js';
+import { requireRole } from '../../middlewares/rbac.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
-import { createReportsSchema } from './reports.validation.js';
+import { reportQuerySchema } from './reports.validation.js';
 
 const router = Router();
 
-router.get('/', getReportss);
-router.get('/:id', getReportsById);
-router.post('/', validate(createReportsSchema), createReports);
+router.use(verifyAuth);
+
+router.get('/quotations', requireRole(['sales_manager', 'finance_ops', 'admin']), validate(reportQuerySchema), controller.getQuotationReport);
+router.get('/export', requireRole(['sales_manager', 'finance_ops', 'admin']), validate(reportQuerySchema), controller.exportReport);
 
 export default router;

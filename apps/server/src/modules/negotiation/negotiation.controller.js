@@ -1,17 +1,29 @@
-import { negotiationService } from './negotiation.service.js';
-import { asyncHandler } from '../../shared/utils/asyncHandler.js';
+import negotiationService from './negotiation.service.js';
+import { successResponse } from '../../utils/apiResponse.util.js';
 
-export const getNegotiations = asyncHandler(async (req, res) => {
-  const result = await negotiationService.getAll();
-  res.json({ success: true, data: result });
-});
+export const getPortalQuotation = async (req, res, next) => {
+  try {
+    const result = await negotiationService.getPortalQuotation(req.params.id, req.customerUser);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const getNegotiationById = asyncHandler(async (req, res) => {
-  const result = await negotiationService.getById(req.params.id);
-  res.json({ success: true, data: result });
-});
+export const submitNegotiationRequest = async (req, res, next) => {
+  try {
+    const result = await negotiationService.submitNegotiationRequest(req.params.id, req.body, req.customerUser);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const createNegotiation = asyncHandler(async (req, res) => {
-  const result = await negotiationService.create(req.body);
-  res.status(201).json({ success: true, data: result });
-});
+export const confirmPortalQuotation = async (req, res, next) => {
+  try {
+    const result = await negotiationService.confirmPortalQuotation(req.params.id, req.customerUser);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};

@@ -1,7 +1,11 @@
 import { z } from 'zod';
 
-export const createAuditSchema = z.object({
-  body: z.object({
-    name: z.string().optional(),
-  }),
+export const auditQuerySchema = z.object({
+  query: z.object({
+    entityType: z.string().optional(),
+    entityId: z.string().optional(),
+    userId: z.string().optional(),
+    page: z.string().optional(),
+    limit: z.string().optional()
+  })
 });

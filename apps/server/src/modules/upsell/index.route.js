@@ -1,1 +1,2 @@
-export { default } from './upsell.route.js';
+import upsellRoutes from './upsell.route.js';
+export default upsellRoutes;

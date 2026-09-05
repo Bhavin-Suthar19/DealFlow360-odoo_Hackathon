@@ -1,17 +1,65 @@
-import { quotationsService } from './quotations.service.js';
-import { asyncHandler } from '../../shared/utils/asyncHandler.js';
+import quotationsService from './quotations.service.js';
+import { successResponse } from '../../utils/apiResponse.util.js';
 
-export const getQuotationss = asyncHandler(async (req, res) => {
-  const result = await quotationsService.getAll();
-  res.json({ success: true, data: result });
-});
+export const getAll = async (req, res, next) => {
+  try {
+    const result = await quotationsService.getAll(req.query, req.user);
+    return successResponse(res, result.data, result.meta);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const getQuotationsById = asyncHandler(async (req, res) => {
-  const result = await quotationsService.getById(req.params.id);
-  res.json({ success: true, data: result });
-});
+export const getById = async (req, res, next) => {
+  try {
+    const result = await quotationsService.getById(req.params.id);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const createQuotations = asyncHandler(async (req, res) => {
-  const result = await quotationsService.create(req.body);
-  res.status(201).json({ success: true, data: result });
-});
+export const create = async (req, res, next) => {
+  try {
+    const result = await quotationsService.create(req.body, req.user);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const addLine = async (req, res, next) => {
+  try {
+    const result = await quotationsService.addLine(req.params.id, req.body, req.user);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateLine = async (req, res, next) => {
+  try {
+    const result = await quotationsService.updateLine(req.params.id, req.params.lineId, req.body);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteLine = async (req, res, next) => {
+  try {
+    const result = await quotationsService.deleteLine(req.params.id, req.params.lineId);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const submitQuotation = async (req, res, next) => {
+  try {
+    const result = await quotationsService.submitQuotation(req.params.id, req.user);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};

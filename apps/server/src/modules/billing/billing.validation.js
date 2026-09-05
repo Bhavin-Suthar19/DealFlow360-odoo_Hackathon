@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
-export const createBillingSchema = z.object({
+export const recordPaymentSchema = z.object({
   body: z.object({
-    name: z.string().optional(),
-  }),
+    amount_paid: z.number().min(0.01),
+    method: z.string().default('bank_transfer')
+  })
 });

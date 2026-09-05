@@ -1,17 +1,56 @@
-import { discountTiersService } from './discount-tiers.service.js';
-import { asyncHandler } from '../../shared/utils/asyncHandler.js';
+import discountTiersService from './discount-tiers.service.js';
+import { successResponse } from '../../utils/apiResponse.util.js';
 
-export const getDiscountTierss = asyncHandler(async (req, res) => {
-  const result = await discountTiersService.getAll();
-  res.json({ success: true, data: result });
-});
+export const getTiers = async (req, res, next) => {
+  try {
+    const result = await discountTiersService.getTiers();
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const getDiscountTiersById = asyncHandler(async (req, res) => {
-  const result = await discountTiersService.getById(req.params.id);
-  res.json({ success: true, data: result });
-});
+export const createTier = async (req, res, next) => {
+  try {
+    const result = await discountTiersService.createTier(req.body);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const createDiscountTiers = asyncHandler(async (req, res) => {
-  const result = await discountTiersService.create(req.body);
-  res.status(201).json({ success: true, data: result });
-});
+export const updateTier = async (req, res, next) => {
+  try {
+    const result = await discountTiersService.updateTier(req.params.id, req.body);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getCategoryCeilings = async (req, res, next) => {
+  try {
+    const result = await discountTiersService.getCategoryCeilings();
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const createCategoryCeiling = async (req, res, next) => {
+  try {
+    const result = await discountTiersService.createCategoryCeiling(req.body);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateCategoryCeiling = async (req, res, next) => {
+  try {
+    const result = await discountTiersService.updateCategoryCeiling(req.params.id, req.body);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};

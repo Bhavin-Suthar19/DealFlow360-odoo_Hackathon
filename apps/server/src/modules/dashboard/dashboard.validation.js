@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-export const createDashboardSchema = z.object({
+export const alertActionSchema = z.object({
   body: z.object({
-    name: z.string().optional(),
-  }),
+    detail: z.string().optional()
+  })
 });

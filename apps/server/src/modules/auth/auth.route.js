@@ -1,12 +1,13 @@
 import { Router } from 'express';
-import { getAuths, getAuthById, createAuth } from './auth.controller.js';
+import * as authController from './auth.controller.js';
 import { validate } from '../../middlewares/validate.middleware.js';
-import { createAuthSchema } from './auth.validation.js';
+import { signupSchema, loginSchema, portalLoginSchema } from './auth.validation.js';
 
 const router = Router();
 
-router.get('/', getAuths);
-router.get('/:id', getAuthById);
-router.post('/', validate(createAuthSchema), createAuth);
+router.post('/signup', validate(signupSchema), authController.signup);
+router.post('/login', validate(loginSchema), authController.login);
+router.post('/logout', authController.logout);
+router.post('/portal/login', validate(portalLoginSchema), authController.portalLogin);
 
 export default router;

@@ -1,17 +1,29 @@
-import { upsellService } from './upsell.service.js';
-import { asyncHandler } from '../../shared/utils/asyncHandler.js';
+import upsellService from './upsell.service.js';
+import { successResponse } from '../../utils/apiResponse.util.js';
 
-export const getUpsells = asyncHandler(async (req, res) => {
-  const result = await upsellService.getAll();
-  res.json({ success: true, data: result });
-});
+export const getRules = async (req, res, next) => {
+  try {
+    const result = await upsellService.getRules();
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const getUpsellById = asyncHandler(async (req, res) => {
-  const result = await upsellService.getById(req.params.id);
-  res.json({ success: true, data: result });
-});
+export const createRule = async (req, res, next) => {
+  try {
+    const result = await upsellService.createRule(req.body);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const createUpsell = asyncHandler(async (req, res) => {
-  const result = await upsellService.create(req.body);
-  res.status(201).json({ success: true, data: result });
-});
+export const getSuggestions = async (req, res, next) => {
+  try {
+    const result = await upsellService.getSuggestionsForProduct(req.params.id);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};

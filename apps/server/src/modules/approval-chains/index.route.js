@@ -1,1 +1,2 @@
-export { default } from './approval-chains.route.js';
+import approvalChainsRoutes from './approval-chains.route.js';
+export default approvalChainsRoutes;

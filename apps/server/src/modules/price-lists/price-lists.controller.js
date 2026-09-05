@@ -1,17 +1,38 @@
-import { priceListsService } from './price-lists.service.js';
-import { asyncHandler } from '../../shared/utils/asyncHandler.js';
+import priceListsService from './price-lists.service.js';
+import { successResponse } from '../../utils/apiResponse.util.js';
 
-export const getPriceListss = asyncHandler(async (req, res) => {
-  const result = await priceListsService.getAll();
-  res.json({ success: true, data: result });
-});
+export const getAll = async (req, res, next) => {
+  try {
+    const result = await priceListsService.getAll(req.query);
+    return successResponse(res, result.data, result.meta);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const getPriceListsById = asyncHandler(async (req, res) => {
-  const result = await priceListsService.getById(req.params.id);
-  res.json({ success: true, data: result });
-});
+export const getById = async (req, res, next) => {
+  try {
+    const result = await priceListsService.getById(req.params.id);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const createPriceLists = asyncHandler(async (req, res) => {
-  const result = await priceListsService.create(req.body);
-  res.status(201).json({ success: true, data: result });
-});
+export const create = async (req, res, next) => {
+  try {
+    const result = await priceListsService.create(req.body);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const addItem = async (req, res, next) => {
+  try {
+    const result = await priceListsService.addItem(req.params.id, req.body);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};

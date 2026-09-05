@@ -1,12 +1,14 @@
 import { Router } from 'express';
-import { getAudits, getAuditById, createAudit } from './audit.controller.js';
+import * as controller from './audit.controller.js';
+import { verifyAuth } from '../../middlewares/auth.middleware.js';
+import { requireRole } from '../../middlewares/rbac.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
-import { createAuditSchema } from './audit.validation.js';
+import { auditQuerySchema } from './audit.validation.js';
 
 const router = Router();
 
-router.get('/', getAudits);
-router.get('/:id', getAuditById);
-router.post('/', validate(createAuditSchema), createAudit);
+router.use(verifyAuth);
+
+router.get('/', requireRole(['sales_manager', 'admin']), validate(auditQuerySchema), controller.getLogs);
 
 export default router;

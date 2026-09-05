@@ -1,17 +1,45 @@
-import { authService } from './auth.service.js';
-import { asyncHandler } from '../../shared/utils/asyncHandler.js';
+import authService from './auth.service.js';
+import { successResponse } from '../../utils/apiResponse.util.js';
 
-export const getAuths = asyncHandler(async (req, res) => {
-  const result = await authService.getAll();
-  res.json({ success: true, data: result });
-});
+export const signup = async (req, res, next) => {
+  try {
+    const result = await authService.signup(req.body);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const getAuthById = asyncHandler(async (req, res) => {
-  const result = await authService.getById(req.params.id);
-  res.json({ success: true, data: result });
-});
+export const login = async (req, res, next) => {
+  try {
+    const result = await authService.login(req.body);
+    if (result.refreshToken) {
+      res.cookie('refreshToken', result.refreshToken, {
+        httpOnly: true,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+    }
+    return successResponse(res, { user: result.user, token: result.token });
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const createAuth = asyncHandler(async (req, res) => {
-  const result = await authService.create(req.body);
-  res.status(201).json({ success: true, data: result });
-});
+export const logout = async (req, res, next) => {
+  try {
+    res.clearCookie('refreshToken');
+    return successResponse(res, { message: 'Logged out successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const portalLogin = async (req, res, next) => {
+  try {
+    const result = await authService.portalLogin(req.body);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};

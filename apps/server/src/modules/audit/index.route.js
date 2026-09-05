@@ -1,1 +1,2 @@
-export { default } from './audit.route.js';
+import auditRoutes from './audit.route.js';
+export default auditRoutes;

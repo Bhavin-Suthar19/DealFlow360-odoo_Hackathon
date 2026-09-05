@@ -1,1 +1,2 @@
-export { default } from './warehouses.route.js';
+import warehousesRoutes from './warehouses.route.js';
+export default warehousesRoutes;

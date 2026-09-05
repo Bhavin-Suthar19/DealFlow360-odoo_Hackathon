@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-export const createApprovalsSchema = z.object({
+export const approvalActionSchema = z.object({
   body: z.object({
-    name: z.string().optional(),
-  }),
+    note: z.string().min(1, 'Note is required for approval/rejection/return actions')
+  })
 });

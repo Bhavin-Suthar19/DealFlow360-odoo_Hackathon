@@ -1,8 +1,13 @@
-export const checkRole = (allowedRoles = []) => {
+import { errorResponse } from '../utils/apiResponse.util.js';
+
+export const requireRole = (allowedRoles = []) => {
   return (req, res, next) => {
     if (!req.user || !allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ success: false, message: 'Forbidden: Insufficient permissions' });
+      return errorResponse(res, 'Forbidden: Insufficient permissions for this action', 'FORBIDDEN', 403);
     }
     next();
   };
 };
+
+export const checkRole = requireRole;
+export default requireRole;

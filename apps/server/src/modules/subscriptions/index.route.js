@@ -1,1 +1,2 @@
-export { default } from './subscriptions.route.js';
+import subscriptionsRoutes from './subscriptions.route.js';
+export default subscriptionsRoutes;

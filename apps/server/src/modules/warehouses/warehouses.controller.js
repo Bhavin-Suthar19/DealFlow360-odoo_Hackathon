@@ -1,17 +1,47 @@
-import { warehousesService } from './warehouses.service.js';
-import { asyncHandler } from '../../shared/utils/asyncHandler.js';
+import warehousesService from './warehouses.service.js';
+import { successResponse } from '../../utils/apiResponse.util.js';
 
-export const getWarehousess = asyncHandler(async (req, res) => {
-  const result = await warehousesService.getAll();
-  res.json({ success: true, data: result });
-});
+export const getAll = async (req, res, next) => {
+  try {
+    const result = await warehousesService.getAll(req.query);
+    return successResponse(res, result.data, result.meta);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const getWarehousesById = asyncHandler(async (req, res) => {
-  const result = await warehousesService.getById(req.params.id);
-  res.json({ success: true, data: result });
-});
+export const create = async (req, res, next) => {
+  try {
+    const result = await warehousesService.create(req.body);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const createWarehouses = asyncHandler(async (req, res) => {
-  const result = await warehousesService.create(req.body);
-  res.status(201).json({ success: true, data: result });
-});
+export const update = async (req, res, next) => {
+  try {
+    const result = await warehousesService.update(req.params.id, req.body);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getStock = async (req, res, next) => {
+  try {
+    const result = await warehousesService.getStock(req.params.id);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateStock = async (req, res, next) => {
+  try {
+    const result = await warehousesService.updateStock(req.params.id, req.body);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};

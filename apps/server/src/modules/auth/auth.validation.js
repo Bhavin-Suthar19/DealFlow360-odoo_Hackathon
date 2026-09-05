@@ -1,7 +1,26 @@
 import { z } from 'zod';
 
-export const createAuthSchema = z.object({
+export const signupSchema = z.object({
   body: z.object({
-    name: z.string().optional(),
-  }),
+    name: z.string().min(2),
+    email: z.string().email(),
+    password: z.string().min(6),
+    role: z.enum(['sales_rep', 'sales_manager', 'finance_ops', 'admin']),
+    team_id: z.string().optional()
+  })
+});
+
+export const loginSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+    password: z.string().min(1)
+  })
+});
+
+export const portalLoginSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+    password: z.string().optional(),
+    magic_token: z.string().optional()
+  })
 });

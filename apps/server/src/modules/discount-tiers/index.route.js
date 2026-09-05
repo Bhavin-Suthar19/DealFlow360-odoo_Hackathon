@@ -1,1 +1,2 @@
-export { default } from './discount-tiers.route.js';
+import discountTiersRoutes from './discount-tiers.route.js';
+export default discountTiersRoutes;

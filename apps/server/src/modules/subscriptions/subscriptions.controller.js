@@ -1,17 +1,56 @@
-import { subscriptionsService } from './subscriptions.service.js';
-import { asyncHandler } from '../../shared/utils/asyncHandler.js';
+import subscriptionsService from './subscriptions.service.js';
+import { successResponse } from '../../utils/apiResponse.util.js';
 
-export const getSubscriptionss = asyncHandler(async (req, res) => {
-  const result = await subscriptionsService.getAll();
-  res.json({ success: true, data: result });
-});
+export const getPlans = async (req, res, next) => {
+  try {
+    const result = await subscriptionsService.getPlans();
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const getSubscriptionsById = asyncHandler(async (req, res) => {
-  const result = await subscriptionsService.getById(req.params.id);
-  res.json({ success: true, data: result });
-});
+export const createPlan = async (req, res, next) => {
+  try {
+    const result = await subscriptionsService.createPlan(req.body);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const createSubscriptions = asyncHandler(async (req, res) => {
-  const result = await subscriptionsService.create(req.body);
-  res.status(201).json({ success: true, data: result });
-});
+export const getAll = async (req, res, next) => {
+  try {
+    const result = await subscriptionsService.getAll(req.query);
+    return successResponse(res, result.data, result.meta);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const create = async (req, res, next) => {
+  try {
+    const result = await subscriptionsService.create(req.body);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const cancel = async (req, res, next) => {
+  try {
+    const result = await subscriptionsService.cancel(req.params.id, req.body?.reason);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getBillingSchedule = async (req, res, next) => {
+  try {
+    const result = await subscriptionsService.getBillingSchedule(req.params.id);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};

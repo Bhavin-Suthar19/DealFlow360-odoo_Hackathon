@@ -35,9 +35,12 @@ router.use('/fulfillment', fulfillmentRoutes);
 router.use('/subscriptions', subscriptionsRoutes);
 router.use('/billing', billingRoutes);
 router.use('/upsell', upsellRoutes);
+router.use('/portal', negotiationRoutes);
 router.use('/negotiation', negotiationRoutes);
+router.use('/deal-health', dashboardRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/reports', reportsRoutes);
+router.use('/audit-log', auditRoutes);
 router.use('/audit', auditRoutes);
 
 export default router;

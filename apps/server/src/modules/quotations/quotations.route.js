@@ -1,12 +1,23 @@
 import { Router } from 'express';
-import { getQuotationss, getQuotationsById, createQuotations } from './quotations.controller.js';
+import * as controller from './quotations.controller.js';
+import { verifyAuth } from '../../middlewares/auth.middleware.js';
+import { requireRole } from '../../middlewares/rbac.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
-import { createQuotationsSchema } from './quotations.validation.js';
+import { createQuotationSchema, addQuotationLineSchema, updateQuotationLineSchema } from './quotations.validation.js';
 
 const router = Router();
 
-router.get('/', getQuotationss);
-router.get('/:id', getQuotationsById);
-router.post('/', validate(createQuotationsSchema), createQuotations);
+router.use(verifyAuth);
+
+router.get('/', controller.getAll);
+router.get('/:id', controller.getById);
+
+router.post('/', requireRole(['sales_rep', 'sales_manager', 'admin']), validate(createQuotationSchema), controller.create);
+
+router.post('/:id/lines', requireRole(['sales_rep', 'sales_manager', 'admin']), validate(addQuotationLineSchema), controller.addLine);
+router.patch('/:id/lines/:lineId', requireRole(['sales_rep', 'sales_manager', 'admin']), validate(updateQuotationLineSchema), controller.updateLine);
+router.delete('/:id/lines/:lineId', requireRole(['sales_rep', 'sales_manager', 'admin']), controller.deleteLine);
+
+router.post('/:id/submit', requireRole(['sales_rep', 'sales_manager', 'admin']), controller.submitQuotation);
 
 export default router;

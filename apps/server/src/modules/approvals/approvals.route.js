@@ -1,12 +1,19 @@
 import { Router } from 'express';
-import { getApprovalss, getApprovalsById, createApprovals } from './approvals.controller.js';
+import * as controller from './approvals.controller.js';
+import { verifyAuth } from '../../middlewares/auth.middleware.js';
+import { requireRole } from '../../middlewares/rbac.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
-import { createApprovalsSchema } from './approvals.validation.js';
+import { approvalActionSchema } from './approvals.validation.js';
 
 const router = Router();
 
-router.get('/', getApprovalss);
-router.get('/:id', getApprovalsById);
-router.post('/', validate(createApprovalsSchema), createApprovals);
+router.use(verifyAuth);
+
+router.get('/', controller.getAll);
+router.get('/:id', controller.getById);
+
+router.post('/:id/approve', requireRole(['sales_manager', 'finance_ops', 'admin']), validate(approvalActionSchema), controller.approve);
+router.post('/:id/reject', requireRole(['sales_manager', 'finance_ops', 'admin']), validate(approvalActionSchema), controller.reject);
+router.post('/:id/return-for-revision', requireRole(['sales_manager', 'finance_ops', 'admin']), validate(approvalActionSchema), controller.returnForRevision);
 
 export default router;

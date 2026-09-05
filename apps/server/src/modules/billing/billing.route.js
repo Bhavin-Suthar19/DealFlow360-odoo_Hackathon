@@ -1,12 +1,16 @@
 import { Router } from 'express';
-import { getBillings, getBillingById, createBilling } from './billing.controller.js';
+import * as controller from './billing.controller.js';
+import { verifyAuth } from '../../middlewares/auth.middleware.js';
+import { requireRole } from '../../middlewares/rbac.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
-import { createBillingSchema } from './billing.validation.js';
+import { recordPaymentSchema } from './billing.validation.js';
 
 const router = Router();
 
-router.get('/', getBillings);
-router.get('/:id', getBillingById);
-router.post('/', validate(createBillingSchema), createBilling);
+router.use(verifyAuth);
+
+router.get('/invoices', controller.getAllInvoices);
+router.get('/invoices/:id', controller.getInvoiceById);
+router.post('/invoices/:id/payments', requireRole(['finance_ops', 'admin']), validate(recordPaymentSchema), controller.recordPayment);
 
 export default router;

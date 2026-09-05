@@ -1,1 +1,2 @@
-export { default } from './fulfillment.route.js';
+import fulfillmentRoutes from './fulfillment.route.js';
+export default fulfillmentRoutes;

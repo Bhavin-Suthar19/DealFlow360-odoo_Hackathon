@@ -1,1 +1,2 @@
-export { default } from './approvals.route.js';
+import approvalsRoutes from './approvals.route.js';
+export default approvalsRoutes;
