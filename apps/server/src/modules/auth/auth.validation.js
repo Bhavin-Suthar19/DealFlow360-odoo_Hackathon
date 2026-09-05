@@ -4,9 +4,7 @@ export const signupSchema = z.object({
   body: z.object({
     name: z.string().min(2),
     email: z.string().email(),
-    password: z.string().min(6),
-    role: z.enum(['sales_rep', 'sales_manager', 'finance_ops', 'admin']),
-    team_id: z.string().optional()
+    password: z.string().min(6)
   })
 });
 

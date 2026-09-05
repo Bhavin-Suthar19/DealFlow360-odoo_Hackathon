@@ -5,11 +5,23 @@ const quotationSchema = new mongoose.Schema(
   {
     _id: { type: String, default: () => crypto.randomUUID() },
     quote_number: { type: String, required: true, unique: true, trim: true },
+    rfq_id: { type: String, ref: 'QuotationRequest', default: null },
     customer_id: { type: String, ref: 'Customer', required: true },
     sales_rep_id: { type: String, ref: 'User', required: true },
     status: {
       type: String,
-      enum: ['Draft', 'Pending Approval', 'Approved', 'Negotiation', 'Confirmed', 'Rejected'],
+      enum: [
+        'RFQ Received',
+        'Draft',
+        'Pending Customer Approval',
+        'Under Negotiation',
+        'Pending Manager Approval',
+        'Pending Finance Approval',
+        'Approved',
+        'Confirmed',
+        'Rejected',
+        'Returned'
+      ],
       required: true,
       index: true,
       default: 'Draft'

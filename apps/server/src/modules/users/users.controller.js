@@ -1,17 +1,29 @@
-import { usersService } from './users.service.js';
-import { asyncHandler } from '../../shared/utils/asyncHandler.js';
+import usersService from './users.service.js';
+import { successResponse } from '../../utils/apiResponse.util.js';
 
-export const getUserss = asyncHandler(async (req, res) => {
-  const result = await usersService.getAll();
-  res.json({ success: true, data: result });
-});
+export const getUsers = async (req, res, next) => {
+  try {
+    const result = await usersService.getAll();
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const getUsersById = asyncHandler(async (req, res) => {
-  const result = await usersService.getById(req.params.id);
-  res.json({ success: true, data: result });
-});
+export const getUsersById = async (req, res, next) => {
+  try {
+    const result = await usersService.getById(req.params.id);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
 
-export const createUsers = asyncHandler(async (req, res) => {
-  const result = await usersService.create(req.body);
-  res.status(201).json({ success: true, data: result });
-});
+export const provisionUser = async (req, res, next) => {
+  try {
+    const result = await usersService.provisionUser(req.body);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};

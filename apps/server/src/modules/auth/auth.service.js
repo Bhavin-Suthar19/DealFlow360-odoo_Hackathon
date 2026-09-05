@@ -2,10 +2,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import env from '../../config/env.config.js';
 import { User, CustomerUser } from '../../models/index.js';
+import redisLockoutService from '../../utils/redis.service.js';
 
 export class AuthService {
   async signup(data) {
-    const existing = await User.findOne({ email: data.email.toLowerCase() });
+    const normEmail = data.email.toLowerCase();
+    const existing = await User.findOne({ email: normEmail });
     if (existing) {
       const err = new Error('User with this email already exists');
       err.statusCode = 400;
@@ -13,51 +15,20 @@ export class AuthService {
     }
 
     const password_hash = await bcrypt.hash(data.password, 12);
+    
+    // Public signup is strictly defaulted to 'customer' role
     const user = await User.create({
       name: data.name,
-      email: data.email.toLowerCase(),
+      email: normEmail,
       password_hash,
-      role: data.role,
-      team_id: data.team_id || null
+      role: 'customer',
+      team_id: null
     });
 
     const token = jwt.sign(
       { userId: user._id, role: user.role, teamId: user.team_id, tokenType: 'internal' },
       env.JWT_SECRET,
-      { expiresIn: env.JWT_EXPIRES_IN || '8h' }
-    );
-
-    return {
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        team_id: user.team_id
-      },
-      token
-    };
-  }
-
-  async login({ email, password }) {
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      const err = new Error('Invalid email or password');
-      err.statusCode = 401;
-      throw err;
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) {
-      const err = new Error('Invalid email or password');
-      err.statusCode = 401;
-      throw err;
-    }
-
-    const token = jwt.sign(
-      { userId: user._id, role: user.role, teamId: user.team_id, tokenType: 'internal' },
-      env.JWT_SECRET,
-      { expiresIn: env.JWT_EXPIRES_IN || '8h' }
+      { expiresIn: '15m' }
     );
 
     const refreshToken = jwt.sign(
@@ -77,6 +48,117 @@ export class AuthService {
       token,
       refreshToken
     };
+  }
+
+  async login({ email, password }) {
+    const normEmail = email.toLowerCase();
+
+    // Step 1: Check Redis Lockout Status
+    const lockStatus = await redisLockoutService.isAccountLocked(normEmail);
+    if (lockStatus.isLocked) {
+      const err = new Error(`Account temporarily locked due to 5 consecutive failed login attempts. Please try again after ${lockStatus.remainingMinutes} minute(s).`);
+      err.statusCode = 429;
+      err.isLocked = true;
+      throw err;
+    }
+
+    // Step 2: Validate User
+    const user = await User.findOne({ email: normEmail });
+    if (!user) {
+      const attemptInfo = await redisLockoutService.recordFailedAttempt(normEmail);
+      if (attemptInfo.isNowLocked) {
+        const err = new Error('Account temporarily locked due to 5 consecutive failed login attempts. Please try again after 15 minutes.');
+        err.statusCode = 429;
+        err.isLocked = true;
+        throw err;
+      }
+      const remaining = 5 - attemptInfo.attempts;
+      const err = new Error(`Invalid email or password. ${remaining} attempt(s) remaining before temporary account lock.`);
+      err.statusCode = 401;
+      err.remainingAttempts = remaining;
+      throw err;
+    }
+
+    // Step 3: Compare Password Hash
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      const attemptInfo = await redisLockoutService.recordFailedAttempt(normEmail);
+      if (attemptInfo.isNowLocked) {
+        const err = new Error('Account temporarily locked due to 5 consecutive failed login attempts. Please try again after 15 minutes.');
+        err.statusCode = 429;
+        err.isLocked = true;
+        throw err;
+      }
+      const remaining = 5 - attemptInfo.attempts;
+      const err = new Error(`Invalid email or password. ${remaining} attempt(s) remaining before temporary account lock.`);
+      err.statusCode = 401;
+      err.remainingAttempts = remaining;
+      throw err;
+    }
+
+    // Clear failed attempt tracking on successful login
+    await redisLockoutService.clearFailedAttempts(normEmail);
+
+    // Step 4: Issue Dual Tokens
+    const token = jwt.sign(
+      { userId: user._id, role: user.role, teamId: user.team_id, tokenType: 'internal' },
+      env.JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    const refreshToken = jwt.sign(
+      { userId: user._id, tokenType: 'refresh' },
+      env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return {
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        team_id: user.team_id
+      },
+      token,
+      refreshToken
+    };
+  }
+
+  async refreshToken(tokenString) {
+    if (!tokenString) {
+      const err = new Error('Refresh token required');
+      err.statusCode = 401;
+      throw err;
+    }
+
+    try {
+      const decoded = jwt.verify(tokenString, env.JWT_SECRET);
+      if (decoded.tokenType !== 'refresh') {
+        const err = new Error('Invalid refresh token type');
+        err.statusCode = 401;
+        throw err;
+      }
+
+      const user = await User.findById(decoded.userId);
+      if (!user) {
+        const err = new Error('User not found');
+        err.statusCode = 404;
+        throw err;
+      }
+
+      const accessToken = jwt.sign(
+        { userId: user._id, role: user.role, teamId: user.team_id, tokenType: 'internal' },
+        env.JWT_SECRET,
+        { expiresIn: '15m' }
+      );
+
+      return { accessToken, user };
+    } catch (error) {
+      const err = new Error('Invalid or expired refresh token');
+      err.statusCode = 401;
+      throw err;
+    }
   }
 
   async portalLogin({ email, password, magic_token }) {

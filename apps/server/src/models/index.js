@@ -38,6 +38,7 @@ export { UpsellRule } from '../modules/upsell/upsell-rules.model.js';
 // Module 7 — Quotations
 export { Quotation } from '../modules/quotations/quotations.model.js';
 export { QuotationLine } from '../modules/quotations/quotation-lines.model.js';
+export { QuotationRequest } from '../modules/quotations/quotation-requests.model.js';
 export { QuotationNegotiationRequest } from '../modules/negotiation/quotation-negotiation-requests.model.js';
 
 // Module 8 — Approvals

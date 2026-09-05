@@ -1,12 +1,14 @@
 import { Router } from 'express';
-import { getUserss, getUsersById, createUsers } from './users.controller.js';
-import { validate } from '../../middlewares/validate.middleware.js';
-import { createUsersSchema } from './users.validation.js';
+import * as controller from './users.controller.js';
+import { verifyAuth } from '../../middlewares/auth.middleware.js';
+import { requireRole } from '../../middlewares/rbac.middleware.js';
 
 const router = Router();
 
-router.get('/', getUserss);
-router.get('/:id', getUsersById);
-router.post('/', validate(createUsersSchema), createUsers);
+router.use(verifyAuth);
+
+router.get('/', controller.getUsers);
+router.get('/:id', controller.getUsersById);
+router.post('/provision', requireRole(['admin']), controller.provisionUser);
 
 export default router;

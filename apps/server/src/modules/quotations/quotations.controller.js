@@ -55,6 +55,42 @@ export const deleteLine = async (req, res, next) => {
   }
 };
 
+export const createRFQ = async (req, res, next) => {
+  try {
+    const result = await quotationsService.createRFQ(req.body, req.user);
+    return successResponse(res, result, null, 201);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getRFQs = async (req, res, next) => {
+  try {
+    const result = await quotationsService.getRFQs(req.query, req.user);
+    return successResponse(res, result.data, result.meta);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const sendToCustomer = async (req, res, next) => {
+  try {
+    const result = await quotationsService.sendToCustomer(req.params.id, req.user);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const escalateToManager = async (req, res, next) => {
+  try {
+    const result = await quotationsService.escalateToManager(req.params.id, req.body?.note, req.user);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const submitQuotation = async (req, res, next) => {
   try {
     const result = await quotationsService.submitQuotation(req.params.id, req.user);

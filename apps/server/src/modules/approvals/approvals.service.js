@@ -51,11 +51,16 @@ export class ApprovalsService {
         throw err;
       }
 
-      // Check if user has finance_ops role or if this is the final step
-      if (user.role === 'sales_manager' && approval.risk_level === 'HIGH') {
-        // Multi-tier: Advance to Finance approval
+      // Check risk score: if sales manager is approving and risk score > 15% (HIGH risk), auto-redirect to Finance Ops
+      const isHighRisk = approval.blended_risk_score > 15 || approval.risk_level === 'HIGH';
+
+      if (user?.role === 'sales_manager' && isHighRisk) {
+        // High Risk Score overage -> System automatically escalates to Financial Operations
         approval.status = 'Pending';
         await approval.save({ session });
+
+        quotation.status = 'Pending Finance Approval';
+        await quotation.save({ session });
 
         await ApprovalStepLog.create(
           [
@@ -63,7 +68,7 @@ export class ApprovalsService {
               approval_id: id,
               user_id: user.userId,
               action: 'Approved',
-              note: `${note} (Escalated to Finance Ops for Level 2 review)`
+              note: note || `Approved by Sales Manager. Auto-escalated to Financial Operations due to High Risk Score (${approval.blended_risk_score}% > 15% threshold).`
             }
           ],
           { session }
@@ -72,9 +77,9 @@ export class ApprovalsService {
         await session.commitTransaction();
         session.endSession();
 
-        return { approval, quotation, message: 'Approved by Manager. Escalated to Finance.' };
+        return { approval, quotation, status: 'Pending Finance Approval', message: 'Approved by Sales Manager. Escalated to Financial Operations.' };
       } else {
-        // Final approval: Confirm quote
+        // Low Risk Score (<= 15%) or Financial Operations final signoff
         approval.status = 'Approved';
         await approval.save({ session });
 
@@ -85,9 +90,9 @@ export class ApprovalsService {
           [
             {
               approval_id: id,
-              user_id: user.userId,
+              user_id: user?.userId || 'usr-mgr1',
               action: 'Approved',
-              note: note || 'Final approval granted'
+              note: note || 'Final approval granted. Quotation confirmed.'
             }
           ],
           { session }
@@ -96,10 +101,10 @@ export class ApprovalsService {
         await session.commitTransaction();
         session.endSession();
 
-        // Trigger fulfillment
+        // Trigger automatic fulfillment order creation
         await fulfillmentService.createFulfillmentOrderForQuotation(quotation._id);
 
-        return { approval, quotation, message: 'Quotation approved and confirmed' };
+        return { approval, quotation, status: 'Approved', message: 'Quotation approved and confirmed. Fulfillment order created.' };
       }
     } catch (err) {
       await session.abortTransaction();
