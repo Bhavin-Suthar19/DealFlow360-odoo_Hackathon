@@ -23,7 +23,7 @@ export const MainNavbar = ({
   currentUser,
   setCurrentUser,
   theme,
-  toggleTheme,
+  onToggleTheme,
   onLogout
 }) => {
   const navItems = [
@@ -45,12 +45,12 @@ export const MainNavbar = ({
         <div className="flex items-center justify-between h-16">
           {/* Logo Brand */}
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 flex items-center justify-center shadow-md shadow-indigo-500/20">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-700 via-purple-600 to-indigo-500 flex items-center justify-center shadow-md shadow-purple-500/25">
               <Building2 className="w-5 h-5 text-white" />
             </div>
             <div>
               <span className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
-                DealFlow<span className="text-indigo-600 dark:text-indigo-400">360</span>
+                DealFlow<span className="text-purple-600 dark:text-purple-400">360</span>
               </span>
               <span className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-bold">
                 Autonomous Sales Ops
@@ -62,21 +62,21 @@ export const MainNavbar = ({
           <div className="flex items-center gap-3">
             {/* Theme Toggle Button */}
             <button
-              onClick={toggleTheme}
+              onClick={onToggleTheme}
               title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
               className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 transition-colors cursor-pointer"
             >
-              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-600" />}
+              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-purple-600" />}
             </button>
 
             {/* Persona Selector */}
             <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs">
-              <UserCheck className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <UserCheck className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
               <span className="text-slate-500 dark:text-slate-400 font-medium">Role:</span>
               <select
                 value={currentUser.role}
                 onChange={(e) => setCurrentUser({ ...currentUser, role: e.target.value })}
-                className="bg-transparent text-indigo-700 dark:text-indigo-300 font-bold focus:outline-none cursor-pointer"
+                className="bg-transparent text-purple-700 dark:text-purple-300 font-bold focus:outline-none cursor-pointer"
               >
                 <option value="sales_rep" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Sales Rep (Alex)</option>
                 <option value="sales_manager" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Sales Manager (J. Rao)</option>
@@ -88,7 +88,7 @@ export const MainNavbar = ({
             {/* User Profile */}
             <div className="text-right hidden sm:block">
               <span className="block text-xs font-bold text-slate-800 dark:text-slate-200">{currentUser.name}</span>
-              <span className="block text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold uppercase tracking-wider">
+              <span className="block text-[10px] text-purple-600 dark:text-purple-400 font-semibold uppercase tracking-wider">
                 {currentUser.role.replace('_', ' ')}
               </span>
             </div>
@@ -115,7 +115,7 @@ export const MainNavbar = ({
                 onClick={() => setActiveTab(item.id)}
                 className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 font-bold'
+                    ? 'bg-purple-600 text-white shadow-sm shadow-purple-600/30 font-bold'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900/60'
                 }`}
               >

@@ -28,7 +28,7 @@ export const Input = ({
           placeholder={placeholder}
           required={required}
           disabled={disabled}
-          className={`w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700/80 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors disabled:opacity-50 ${
+          className={`w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700/80 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors disabled:opacity-50 ${
             Icon ? 'pl-9 pr-3 py-2' : 'px-3 py-2'
           } ${error ? 'border-rose-500 focus:ring-rose-500' : ''}`}
         />

@@ -45,10 +45,13 @@ export function App() {
     return localStorage.getItem('df360_theme') || 'light';
   });
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem('df360_theme', theme);
+  }, [theme]);
+
   const toggleTheme = () => {
-    const nextTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(nextTheme);
-    localStorage.setItem('df360_theme', nextTheme);
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
   const [currentView, setCurrentView] = useState('login'); // 'login' | 'portal' | 'dashboard' | ...
@@ -305,189 +308,189 @@ export function App() {
   const activeProduct = products.find((p) => p.id === selectedProductId) || products[0];
 
   return (
-    <div className={theme === 'dark' ? 'dark' : ''}>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
-        {/* LOGIN VIEW */}
-        {currentView === 'login' ? (
-          <LoginView
-            onLoginSuccess={handleLoginSuccess}
-            onSelectPortal={() => setCurrentView('portal')}
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+      {/* LOGIN VIEW */}
+      {currentView === 'login' ? (
+        <LoginView
+          onLoginSuccess={handleLoginSuccess}
+          onSelectPortal={() => setCurrentView('portal')}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
+      ) : currentView === 'portal' ? (
+        /* CUSTOMER PORTAL VIEW */
+        <CustomerPortalNegotiationView
+          quote={activeQuote}
+          onSwitchToInternal={() => setCurrentView('dashboard')}
+          onSubmitNegotiation={(id, data) => alert('Negotiation request submitted to sales manager!')}
+          onConfirmQuote={(id) => {
+            setQuotations(quotations.map((q) => (q.id === id ? { ...q, status: 'Confirmed' } : q)));
+            alert('Quotation confirmed! Order routing to fulfillment.');
+          }}
+        />
+      ) : (
+        /* INTERNAL PLATFORM VIEWS */
+        <>
+          <MainNavbar
+            activeTab={currentView}
+            setActiveTab={setCurrentView}
+            currentUser={currentUser}
+            setCurrentUser={setCurrentUser}
+            onLogout={() => setCurrentView('login')}
+            theme={theme}
+            onToggleTheme={toggleTheme}
           />
-        ) : currentView === 'portal' ? (
-          /* CUSTOMER PORTAL VIEW */
-          <CustomerPortalNegotiationView
-            quote={activeQuote}
-            onSwitchToInternal={() => setCurrentView('dashboard')}
-            onSubmitNegotiation={(id, data) => alert('Negotiation request submitted to sales manager!')}
-            onConfirmQuote={(id) => {
-              setQuotations(quotations.map((q) => (q.id === id ? { ...q, status: 'Confirmed' } : q)));
-              alert('Quotation confirmed! Order routing to fulfillment.');
-            }}
-          />
-        ) : (
-          /* INTERNAL PLATFORM VIEWS */
-          <>
-            <MainNavbar
-              activeTab={currentView}
-              setActiveTab={setCurrentView}
-              currentUser={currentUser}
-              setCurrentUser={setCurrentUser}
-              onLogout={() => setCurrentView('login')}
-              theme={theme}
-              onToggleTheme={toggleTheme}
-            />
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
-              {currentView === 'dashboard' && (
-                <DashboardView
-                  quotations={quotations}
-                  approvals={approvals}
-                  alerts={alerts}
-                  onNavigate={navigateTo}
-                />
-              )}
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+            {currentView === 'dashboard' && (
+              <DashboardView
+                quotations={quotations}
+                approvals={approvals}
+                alerts={alerts}
+                onNavigate={navigateTo}
+              />
+            )}
 
-              {currentView === 'quotations' && (
-                <QuotationsKanbanView
-                  quotations={quotations}
-                  onSelectQuote={(id) => navigateTo('quotation-detail', id)}
-                  onCreateQuote={handleCreateQuotation}
-                />
-              )}
+            {currentView === 'quotations' && (
+              <QuotationsKanbanView
+                quotations={quotations}
+                onSelectQuote={(id) => navigateTo('quotation-detail', id)}
+                onCreateQuote={handleCreateQuotation}
+              />
+            )}
 
-              {currentView === 'quotation-detail' && (
-                <QuotationBuilderView
-                  quote={activeQuote}
-                  products={products}
-                  upsellRules={mockUpsellRules}
-                  onBack={() => setCurrentView('quotations')}
-                  onSubmitQuote={handleSubmitQuote}
-                  onSaveDraft={handleSaveDraft}
-                />
-              )}
+            {currentView === 'quotation-detail' && (
+              <QuotationBuilderView
+                quote={activeQuote}
+                products={products}
+                upsellRules={mockUpsellRules}
+                onBack={() => setCurrentView('quotations')}
+                onSubmitQuote={handleSubmitQuote}
+                onSaveDraft={handleSaveDraft}
+              />
+            )}
 
-              {currentView === 'approvals' && (
-                <ApprovalsListView
-                  approvals={approvals}
-                  onSelectApproval={(id) => navigateTo('approval-detail', id)}
-                />
-              )}
+            {currentView === 'approvals' && (
+              <ApprovalsListView
+                approvals={approvals}
+                onSelectApproval={(id) => navigateTo('approval-detail', id)}
+              />
+            )}
 
-              {currentView === 'approval-detail' && (
-                <ApprovalAuditDetailView
-                  approval={activeApproval}
-                  onBack={() => setCurrentView('approvals')}
-                  onApprove={handleApprove}
-                  onReturn={handleReturn}
-                  onReject={handleReject}
-                />
-              )}
+            {currentView === 'approval-detail' && (
+              <ApprovalAuditDetailView
+                approval={activeApproval}
+                onBack={() => setCurrentView('approvals')}
+                onApprove={handleApprove}
+                onReturn={handleReturn}
+                onReject={handleReject}
+              />
+            )}
 
-              {currentView === 'fulfillment' && (
-                <FulfillmentStockView
-                  warehouses={mockWarehouses}
-                  stock={mockStock}
-                  fulfillmentOrders={fulfillmentOrders}
-                  onSelectOrder={(id) => navigateTo('fulfillment-detail', id)}
-                />
-              )}
+            {currentView === 'fulfillment' && (
+              <FulfillmentStockView
+                warehouses={mockWarehouses}
+                stock={mockStock}
+                fulfillmentOrders={fulfillmentOrders}
+                onSelectOrder={(id) => navigateTo('fulfillment-detail', id)}
+              />
+            )}
 
-              {currentView === 'fulfillment-detail' && (
-                <FulfillmentSplitDetailView
-                  order={activeFulfillmentOrder}
-                  onBack={() => setCurrentView('fulfillment')}
-                  onAcceptSplit={handleAcceptSplit}
-                  onManualOverride={(id, splits) => {
-                    setFulfillmentOrders(
-                      fulfillmentOrders.map((fo) => (fo.id === id ? { ...fo, splits } : fo))
-                    );
-                    setCurrentView('fulfillment');
-                  }}
-                />
-              )}
+            {currentView === 'fulfillment-detail' && (
+              <FulfillmentSplitDetailView
+                order={activeFulfillmentOrder}
+                onBack={() => setCurrentView('fulfillment')}
+                onAcceptSplit={handleAcceptSplit}
+                onManualOverride={(id, splits) => {
+                  setFulfillmentOrders(
+                    fulfillmentOrders.map((fo) => (fo.id === id ? { ...fo, splits } : fo))
+                  );
+                  setCurrentView('fulfillment');
+                }}
+              />
+            )}
 
-              {currentView === 'subscriptions' && (
-                <SubscriptionsListView
-                  subscriptions={subscriptions}
-                  onSelectSubscription={(id) => navigateTo('subscription-detail', id)}
-                />
-              )}
+            {currentView === 'subscriptions' && (
+              <SubscriptionsListView
+                subscriptions={subscriptions}
+                onSelectSubscription={(id) => navigateTo('subscription-detail', id)}
+              />
+            )}
 
-              {currentView === 'subscription-detail' && (
-                <BillingDetailView
-                  subscription={activeSubscription}
-                  onBack={() => setCurrentView('subscriptions')}
-                  onCancelSubscription={handleCancelSubscription}
-                />
-              )}
+            {currentView === 'subscription-detail' && (
+              <BillingDetailView
+                subscription={activeSubscription}
+                onBack={() => setCurrentView('subscriptions')}
+                onCancelSubscription={handleCancelSubscription}
+              />
+            )}
 
-              {currentView === 'invoices' && (
-                <InvoicesListView
-                  invoices={invoices}
-                  onSelectInvoice={(id) => navigateTo('invoice-detail', id)}
-                />
-              )}
+            {currentView === 'invoices' && (
+              <InvoicesListView
+                invoices={invoices}
+                onSelectInvoice={(id) => navigateTo('invoice-detail', id)}
+              />
+            )}
 
-              {currentView === 'invoice-detail' && (
-                <InvoiceDetailView
-                  invoice={activeInvoice}
-                  onBack={() => setCurrentView('invoices')}
-                  onRecordPayment={handleRecordPayment}
-                />
-              )}
+            {currentView === 'invoice-detail' && (
+              <InvoiceDetailView
+                invoice={activeInvoice}
+                onBack={() => setCurrentView('invoices')}
+                onRecordPayment={handleRecordPayment}
+              />
+            )}
 
-              {currentView === 'deal-health' && (
-                <DealHealthDashboardView
-                  alerts={alerts}
-                  onNudge={handleNudgeAlert}
-                  onEscalate={handleEscalateAlert}
-                  onRecalculate={() => alert('Anomaly detection recalculation executed cleanly!')}
-                />
-              )}
+            {currentView === 'deal-health' && (
+              <DealHealthDashboardView
+                alerts={alerts}
+                onNudge={handleNudgeAlert}
+                onEscalate={handleEscalateAlert}
+                onRecalculate={() => alert('Anomaly detection recalculation executed cleanly!')}
+              />
+            )}
 
-              {currentView === 'reports' && (
-                <ReportingDashboardView
-                  onExport={(format) => alert(`Downloading DealFlow360 Executive Report in .${format} format`)}
-                />
-              )}
+            {currentView === 'reports' && (
+              <ReportingDashboardView
+                onExport={(format) => alert(`Downloading DealFlow360 Executive Report in .${format} format`)}
+              />
+            )}
 
-              {currentView === 'products' && (
-                <ProductCatalogView
-                  products={products}
-                  variants={mockVariants}
-                  priceLists={mockPriceLists}
-                  onSelectProduct={(id) => navigateTo('product-config', id)}
-                  onCreateProduct={() => {
-                    setSelectedProductId(null);
-                    setCurrentView('product-config');
-                  }}
-                />
-              )}
+            {currentView === 'products' && (
+              <ProductCatalogView
+                products={products}
+                variants={mockVariants}
+                priceLists={mockPriceLists}
+                onSelectProduct={(id) => navigateTo('product-config', id)}
+                onCreateProduct={() => {
+                  setSelectedProductId(null);
+                  setCurrentView('product-config');
+                }}
+              />
+            )}
 
-              {currentView === 'product-config' && (
-                <ProductPricelistConfigView
-                  product={activeProduct}
-                  categories={mockCategories}
-                  onBack={() => setCurrentView('products')}
-                  onSaveProduct={handleSaveProduct}
-                />
-              )}
+            {currentView === 'product-config' && (
+              <ProductPricelistConfigView
+                product={activeProduct}
+                categories={mockCategories}
+                onBack={() => setCurrentView('products')}
+                onSaveProduct={handleSaveProduct}
+              />
+            )}
 
-              {currentView === 'config' && (
-                <DiscountTiersSetupView
-                  discountTiers={discountTiers}
-                  categoryCeilings={categoryCeilings}
-                  approvalRules={mockApprovalRules}
-                  onSaveConfig={({ tiers, ceilings }) => {
-                    setDiscountTiers(tiers);
-                    setCategoryCeilings(ceilings);
-                  }}
-                />
-              )}
-            </main>
-          </>
-        )}
-      </div>
+            {currentView === 'config' && (
+              <DiscountTiersSetupView
+                discountTiers={discountTiers}
+                categoryCeilings={categoryCeilings}
+                approvalRules={mockApprovalRules}
+                onSaveConfig={({ tiers, ceilings }) => {
+                  setDiscountTiers(tiers);
+                  setCategoryCeilings(ceilings);
+                }}
+              />
+            )}
+          </main>
+        </>
+      )}
     </div>
   );
 }
