@@ -5,6 +5,7 @@ import { signupSchema, loginSchema, portalLoginSchema } from './auth.validation.
 
 const router = Router();
 
+router.get('/me', authController.me);
 router.post('/signup', validate(signupSchema), authController.signup);
 router.post('/login', validate(loginSchema), authController.login);
 router.post('/refresh', authController.refreshToken);

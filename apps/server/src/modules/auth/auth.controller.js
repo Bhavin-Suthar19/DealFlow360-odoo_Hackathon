@@ -1,5 +1,41 @@
 import authService from './auth.service.js';
-import { successResponse } from '../../utils/apiResponse.util.js';
+import { successResponse, errorResponse } from '../../utils/apiResponse.util.js';
+import jwt from 'jsonwebtoken';
+import env from '../../config/env.config.js';
+import { User } from '../../models/index.js';
+
+export const me = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return errorResponse(res, 'No token provided', 'UNAUTHORIZED', 401);
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, env.JWT_SECRET);
+
+    if (!decoded.userId) {
+      return errorResponse(res, 'Invalid token', 'UNAUTHORIZED', 401);
+    }
+
+    const user = await User.findById(decoded.userId).select('-password_hash');
+    if (!user) {
+      return errorResponse(res, 'User not found', 'NOT_FOUND', 404);
+    }
+
+    return successResponse(res, {
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        team_id: user.team_id
+      }
+    });
+  } catch (err) {
+    return errorResponse(res, 'Invalid or expired token', 'UNAUTHORIZED', 401);
+  }
+};
 
 export const signup = async (req, res, next) => {
   try {
