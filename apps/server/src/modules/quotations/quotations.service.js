@@ -17,6 +17,7 @@ import {
 import { calculateBlendedRiskScore } from '../../utils/riskScore.util.js';
 import { paginate } from '../../utils/paginate.util.js';
 import fulfillmentService from '../fulfillment/fulfillment.service.js';
+import billingService from '../billing/billing.service.js';
 
 export class QuotationsService {
   async getAll(query = {}, user = {}) {
@@ -401,8 +402,13 @@ export class QuotationsService {
 
   async updateLine(quotationId, lineId, data) {
     const quotation = await Quotation.findById(quotationId);
-    if (!quotation || !['Draft', 'RFQ Received', 'Under Negotiation'].includes(quotation.status)) {
-      const err = new Error(`Cannot modify quote lines when quote is in '${quotation?.status}' state`);
+    if (!quotation) {
+      const err = new Error('Quotation not found');
+      err.statusCode = 404;
+      throw err;
+    }
+    if (!['Draft', 'RFQ Received', 'Under Negotiation'].includes(quotation.status)) {
+      const err = new Error(`Cannot modify quote lines when quote is in '${quotation.status}' state`);
       err.statusCode = 400;
       throw err;
     }
@@ -421,8 +427,13 @@ export class QuotationsService {
 
   async deleteLine(quotationId, lineId) {
     const quotation = await Quotation.findById(quotationId);
-    if (!quotation || !['Draft', 'RFQ Received', 'Under Negotiation'].includes(quotation.status)) {
-      const err = new Error(`Cannot modify quote lines when quote is in '${quotation?.status}' state`);
+    if (!quotation) {
+      const err = new Error('Quotation not found');
+      err.statusCode = 404;
+      throw err;
+    }
+    if (!['Draft', 'RFQ Received', 'Under Negotiation'].includes(quotation.status)) {
+      const err = new Error(`Cannot modify quote lines when quote is in '${quotation.status}' state`);
       err.statusCode = 400;
       throw err;
     }
@@ -473,6 +484,7 @@ export class QuotationsService {
         session.endSession();
 
         await fulfillmentService.createFulfillmentOrderForQuotation(quotationId);
+        await billingService.generateInvoiceFromQuotation(quotationId);
 
         return { quotation, status: 'Approved', risk_level, blended_risk_score };
       } else {

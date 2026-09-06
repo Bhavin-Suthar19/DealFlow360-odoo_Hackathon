@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Approval, ApprovalStepLog, Quotation, QuotationLine } from '../../models/index.js';
 import { paginate } from '../../utils/paginate.util.js';
 import fulfillmentService from '../fulfillment/fulfillment.service.js';
+import billingService from '../billing/billing.service.js';
 
 export class ApprovalsService {
   async getAll(query = {}, user) {
@@ -216,10 +217,11 @@ export class ApprovalsService {
         await session.commitTransaction();
         session.endSession();
 
-        // Trigger automatic fulfillment order creation
+        // Trigger automatic fulfillment order and invoice creation
         await fulfillmentService.createFulfillmentOrderForQuotation(quotation._id);
+        await billingService.generateInvoiceFromQuotation(quotation._id);
 
-        return { approval, quotation, status: 'Approved', message: 'Quotation approved and confirmed. Fulfillment order created.' };
+        return { approval, quotation, status: 'Approved', message: 'Quotation approved and confirmed. Fulfillment order and invoice generated.' };
       }
     } catch (err) {
       await session.abortTransaction();
@@ -234,8 +236,13 @@ export class ApprovalsService {
 
     try {
       const approval = await Approval.findById(id).session(session);
-      if (!approval || approval.status !== 'Pending') {
-        const err = new Error(`Cannot reject approval request in state '${approval?.status}'`);
+      if (!approval) {
+        const err = new Error('Approval record not found');
+        err.statusCode = 404;
+        throw err;
+      }
+      if (approval.status !== 'Pending') {
+        const err = new Error(`Cannot reject approval request in state '${approval.status}'`);
         err.statusCode = 400;
         throw err;
       }
@@ -278,8 +285,13 @@ export class ApprovalsService {
 
     try {
       const approval = await Approval.findById(id).session(session);
-      if (!approval || approval.status !== 'Pending') {
-        const err = new Error(`Cannot return approval request in state '${approval?.status}'`);
+      if (!approval) {
+        const err = new Error('Approval record not found');
+        err.statusCode = 404;
+        throw err;
+      }
+      if (approval.status !== 'Pending') {
+        const err = new Error(`Cannot return approval request in state '${approval.status}'`);
         err.statusCode = 400;
         throw err;
       }

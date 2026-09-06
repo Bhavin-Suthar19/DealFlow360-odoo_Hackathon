@@ -5,6 +5,7 @@ import {
 } from '../../models/index.js';
 import quotationsService from '../quotations/quotations.service.js';
 import fulfillmentService from '../fulfillment/fulfillment.service.js';
+import billingService from '../billing/billing.service.js';
 
 export class NegotiationService {
   async getPortalQuotation(quotationId, customerUser) {
@@ -121,6 +122,7 @@ export class NegotiationService {
       quotation.status = 'Confirmed';
       await quotation.save();
       await fulfillmentService.createFulfillmentOrderForQuotation(quotationId);
+      await billingService.generateInvoiceFromQuotation(quotationId);
     }
 
     return submitResult;
