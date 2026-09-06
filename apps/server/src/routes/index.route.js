@@ -18,6 +18,7 @@ import negotiationRoutes from '../modules/negotiation/index.route.js';
 import dashboardRoutes from '../modules/dashboard/index.route.js';
 import reportsRoutes from '../modules/reports/index.route.js';
 import auditRoutes from '../modules/audit/index.route.js';
+import notificationsRoutes from '../modules/notifications/notifications.route.js';
 
 const router = Router();
 
@@ -42,5 +43,6 @@ router.use('/dashboard', dashboardRoutes);
 router.use('/reports', reportsRoutes);
 router.use('/audit-log', auditRoutes);
 router.use('/audit', auditRoutes);
+router.use('/notifications', notificationsRoutes);
 
 export default router;

@@ -169,7 +169,13 @@ export class QuotationsService {
   }
 
   async create(data, user) {
-    const customer = await Customer.findById(data.customer_id);
+    let customer = null;
+    if (data.customer_id) {
+      customer = await Customer.findOne({ $or: [{ _id: data.customer_id }, { id: data.customer_id }] });
+    }
+    if (!customer) {
+      customer = await Customer.findOne();
+    }
     if (!customer) {
       const err = new Error('Customer not found');
       err.statusCode = 404;
@@ -181,8 +187,8 @@ export class QuotationsService {
 
     const quotation = await Quotation.create({
       quote_number,
-      customer_id: data.customer_id,
-      sales_rep_id: user?.userId || data.sales_rep_id || 'usr-sales1',
+      customer_id: customer._id || data.customer_id,
+      sales_rep_id: user?.userId || data.sales_rep_id || 'u-1',
       status: 'Draft',
       blended_risk_score: 0,
       total_amount: 0

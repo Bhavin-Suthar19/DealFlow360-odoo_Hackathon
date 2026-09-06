@@ -16,6 +16,17 @@ app.use(auditMiddleware);
 app.use('/api', routes);
 app.use('/', routes);
 
+// 404 handler for undefined routes returning JSON
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: {
+      code: 'NOT_FOUND',
+      message: `Cannot ${req.method} ${req.originalUrl}`
+    }
+  });
+});
+
 // Central error handler
 app.use(errorHandler);
 

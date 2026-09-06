@@ -23,7 +23,9 @@ const formatTimeAgo = (dateInput) => {
   if (!dateInput) return 'Recently';
   const now = new Date();
   const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return 'Recently';
   const diffInSeconds = Math.max(0, Math.floor((now - date) / 1000));
+  if (isNaN(diffInSeconds)) return 'Recently';
 
   if (diffInSeconds < 60) return 'Just now';
   const diffInMinutes = Math.floor(diffInSeconds / 60);
@@ -35,6 +37,7 @@ const formatTimeAgo = (dateInput) => {
 };
 
 const formatAuditAction = (log) => {
+  if (!log) return { title: 'Platform Event', subtitle: 'System Activity', type: 'default' };
   const action = log.action || '';
   const entityType = log.entity_type || '';
   const entityId = log.entity_id || '';
@@ -144,22 +147,26 @@ export const DashboardView = ({
     }
   };
 
-  const pendingApprovalsCount = approvals.filter((a) => a.status === 'Pending').length;
-  const openQuotesCount = quotations.filter((q) =>
-    ['Draft', 'Pending Approval', 'Negotiation', 'Pending Manager Approval', 'Pending Customer Approval'].includes(q.status)
+  const safeQuotations = Array.isArray(quotations) ? quotations : [];
+  const safeApprovals = Array.isArray(approvals) ? approvals : [];
+  const safeAlerts = Array.isArray(alerts) ? alerts : [];
+
+  const pendingApprovalsCount = safeApprovals.filter((a) => a?.status === 'Pending').length;
+  const openQuotesCount = safeQuotations.filter((q) =>
+    ['Draft', 'Pending Approval', 'Negotiation', 'Pending Manager Approval', 'Pending Customer Approval'].includes(q?.status)
   ).length;
-  const atRiskDealsCount = alerts.filter((al) => al.status === 'Open').length;
-  const totalPipelineValue = quotations.reduce((sum, q) => sum + (q.total_amount || 0), 0);
+  const atRiskDealsCount = safeAlerts.filter((al) => al?.status === 'Open').length;
+  const totalPipelineValue = safeQuotations.reduce((sum, q) => sum + (q?.total_amount || 0), 0);
 
   // Filtered Quotations
-  const filteredQuotations = quotations.filter((q) => {
+  const filteredQuotations = safeQuotations.filter((q) => {
+    if (!q) return false;
     if (!quoteSearch.trim()) return true;
     const term = quoteSearch.toLowerCase();
-    return (
-      (q.quote_number && q.quote_number.toLowerCase().includes(term)) ||
-      (q.customer_name && q.customer_name.toLowerCase().includes(term)) ||
-      (q.status && q.status.toLowerCase().includes(term))
-    );
+    const qNum = String(q.quote_number || q._id || q.id || '').toLowerCase();
+    const cName = String(q.customer_name || q.customer_id?.name || '').toLowerCase();
+    const st = String(q.status || '').toLowerCase();
+    return qNum.includes(term) || cName.includes(term) || st.includes(term);
   });
 
   const totalQuotePages = Math.max(1, Math.ceil(filteredQuotations.length / quotesPerPage));
@@ -407,9 +414,9 @@ export const DashboardView = ({
                           {q.quote_number || quoteId}
                         </td>
                         <td className="py-3 px-3">
-                          <div className="font-semibold text-slate-900">{q.customer_name || 'Acme Corp'}</div>
-                          {q.sales_rep_name && (
-                            <div className="text-[10px] text-slate-400">Rep: {q.sales_rep_name}</div>
+                          <div className="font-semibold text-slate-900">{q.customer_name || q.customer_id?.name || 'Acme Corp'}</div>
+                          {(q.sales_rep_name || q.sales_rep_id?.name) && (
+                            <div className="text-[10px] text-slate-400">Rep: {q.sales_rep_name || q.sales_rep_id?.name}</div>
                           )}
                         </td>
                         <td className="py-3 px-3 font-mono font-bold text-slate-900">

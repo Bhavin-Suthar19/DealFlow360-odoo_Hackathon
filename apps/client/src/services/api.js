@@ -25,17 +25,28 @@ const request = async (endpoint, options = {}) => {
       headers
     });
 
-    const data = await res.json();
+    const contentType = res.headers.get('content-type') || '';
+    let data;
+    if (contentType.includes('application/json')) {
+      data = await res.json().catch(() => ({}));
+    } else {
+      const text = await res.text().catch(() => '');
+      data = { message: text };
+    }
+
     if (!res.ok) {
-      throw new Error(data.error?.message || data.message || 'API Request Failed');
+      throw new Error(data.error?.message || data.message || `API Request Failed (HTTP ${res.status})`);
     }
     return data;
   } catch (err) {
     // Try fallback to local relative /api endpoint
     try {
       const res = await fetch(`/api${endpoint}`, { ...options, headers });
-      const data = await res.json();
-      if (res.ok) return data;
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('application/json')) {
+        const data = await res.json().catch(() => ({}));
+        return data;
+      }
     } catch (_) {}
 
     console.warn(`API call failed for ${endpoint}:`, err.message);

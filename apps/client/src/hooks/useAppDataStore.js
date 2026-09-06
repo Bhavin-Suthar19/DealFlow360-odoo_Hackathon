@@ -273,9 +273,10 @@ export const useAppDataStore = (navigation) => {
     }
 
     try {
+      const custId = customers[0]?._id || customers[0]?.id || 'cust-1';
       const res = await api.quotations.create({
-        customer_id: 'cust-1',
-        sales_rep_id: currentUser?.id
+        customer_id: custId,
+        sales_rep_id: currentUser?.id || currentUser?.userId
       });
       const created = res.data || res;
       await loadBackendData();
