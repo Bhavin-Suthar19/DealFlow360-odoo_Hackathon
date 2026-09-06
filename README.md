@@ -589,4 +589,4 @@ npm run build
 ---
 
 ## 📄 License & Attribution
-Developed for the **Odoo Hackathon 2026** by Team DealFlow360. Distributed under the MIT License.
+Developed for the **Odoo Hackathon 2026** by Team SuperDevs.
