@@ -21,12 +21,13 @@ export const MainNavbar = ({
   setActiveTab,
   currentUser,
   setCurrentUser,
-  onLogout
+  onLogout,
+  pendingApprovalsCount = 0
 }) => {
   const allNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['sales_rep', 'sales_manager', 'finance_ops', 'admin'] },
     { id: 'quotations', label: 'Quotations', icon: FileText, roles: ['sales_rep', 'sales_manager', 'admin'] },
-    { id: 'approvals', label: 'Approvals', icon: CheckSquare, badge: 1, roles: ['sales_manager', 'finance_ops', 'admin'] },
+    { id: 'approvals', label: 'Approvals', icon: CheckSquare, roles: ['sales_manager', 'finance_ops', 'admin'] },
     { id: 'fulfillment', label: 'Fulfillment', icon: Truck, roles: ['finance_ops', 'admin'] },
     { id: 'subscriptions', label: 'Subscriptions', icon: Repeat, roles: ['finance_ops', 'admin'] },
     { id: 'invoices', label: 'Invoices', icon: CreditCard, roles: ['finance_ops', 'admin'] },
@@ -105,9 +106,11 @@ export const MainNavbar = ({
               >
                 <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                 {item.label}
-                {item.badge && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-slate-950">
-                    {item.badge}
+                {item.id === 'approvals' && pendingApprovalsCount > 0 && (
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold animate-pulse ${
+                    isActive ? 'bg-white text-rose-600' : 'bg-rose-500 text-white'
+                  }`}>
+                    {pendingApprovalsCount > 99 ? '99+' : pendingApprovalsCount}
                   </span>
                 )}
                 {item.alert && <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />}

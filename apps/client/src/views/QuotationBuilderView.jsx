@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
@@ -20,7 +20,10 @@ import {
   Calendar,
   MessageSquare,
   ArrowDownRight,
-  RotateCcw
+  RotateCcw,
+  Search,
+  X,
+  FileText
 } from 'lucide-react';
 
 export const QuotationBuilderView = ({
@@ -28,6 +31,9 @@ export const QuotationBuilderView = ({
   products = [],
   customers = [],
   upsellRules = [],
+  invoices = [],
+  onSelectInvoice,
+  onGenerateInvoice,
   onBack,
   onSubmitQuote,
   onSaveDraft,
@@ -36,6 +42,18 @@ export const QuotationBuilderView = ({
 }) => {
   const { showAlert } = useModal() || {};
   const [bulkDiscountInput, setBulkDiscountInput] = useState('');
+  const [productSearch, setProductSearch] = useState('');
+  const [showProductResults, setShowProductResults] = useState(false);
+
+  const quoteId = quote?._id || quote?.id;
+  const existingInvoice = useMemo(() => {
+    if (!quoteId) return null;
+    return invoices.find(
+      (inv) =>
+        String(inv.quotation_id?._id || inv.quotation_id?.id || inv.quotation_id) === String(quoteId) ||
+        (inv.quote_number && quote?.quote_number && inv.quote_number === quote.quote_number)
+    );
+  }, [invoices, quoteId, quote?.quote_number]);
 
   const customerList = React.useMemo(() => {
     if (Array.isArray(customers) && customers.length > 0) {
@@ -180,6 +198,21 @@ export const QuotationBuilderView = ({
       setSelectedProductId(products[0].id || products[0]._id);
     }
   }, [products, selectedProductId]);
+
+  // Filtered product results for search and browsing
+  const filteredProducts = useMemo(() => {
+    if (!productSearch.trim()) return products.slice(0, 20);
+    const q = productSearch.toLowerCase();
+    return products
+      .filter(
+        (p) =>
+          p.name?.toLowerCase().includes(q) ||
+          p.category_name?.toLowerCase().includes(q) ||
+          p.sku?.toLowerCase().includes(q) ||
+          p.description?.toLowerCase().includes(q)
+      )
+      .slice(0, 30);
+  }, [productSearch, products]);
 
   const counterOffer = quote?.counter_offer || (quote?.counter_discount_pct ? {
     counter_discount_pct: quote.counter_discount_pct,
@@ -457,6 +490,26 @@ export const QuotationBuilderView = ({
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 Quotation Approved
               </span>
+              {existingInvoice ? (
+                <Button
+                  variant="brand"
+                  icon={FileText}
+                  onClick={() => onSelectInvoice?.(existingInvoice._id || existingInvoice.id)}
+                >
+                  View Invoice ({existingInvoice.invoice_number})
+                </Button>
+              ) : onGenerateInvoice ? (
+                <Button
+                  variant="primary"
+                  icon={FileText}
+                  onClick={async () => {
+                    const qId = quote?._id || quote?.id;
+                    if (qId) await onGenerateInvoice(qId);
+                  }}
+                >
+                  Generate Invoice
+                </Button>
+              ) : null}
               <Button variant="outline" icon={Send} onClick={handleSendToCustomerClick}>
                 Resend to Customer
               </Button>
@@ -922,38 +975,97 @@ export const QuotationBuilderView = ({
                 </div>
               </Card>
 
-              <Card title="Add Catalog Product" subtitle="Select products to insert into quote cart">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                  <select
-                    value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
-                    className="flex-1 min-w-0 bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-[#714B67]"
-                  >
-                    {products.map((p) => {
-                      const pId = p.id || p._id;
-                      const stockInfo = p.is_subscription
-                        ? 'Instant SaaS'
-                        : `${p.stock_on_hand ?? 45} in stock`;
-                      return (
-                        <option key={pId} value={pId}>
-                          {p.name} — ${(p.base_price || p.price)?.toLocaleString()} (
-                          {p.category_name || 'Hardware'} • {stockInfo})
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <Button
-                    variant="primary"
-                    icon={Plus}
-                    onClick={() => {
-                      const prod =
-                        products.find((p) => (p.id || p._id) === selectedProductId) || products[0];
-                      if (prod) addProductToQuote(prod);
-                    }}
-                    className="shrink-0 whitespace-nowrap font-bold"
-                  >
-                    Add Item
-                  </Button>
+              <Card title="Add Catalog Product" subtitle="Search and add products to the quote">
+                <div className="relative">
+                  {/* Search Input */}
+                  <div className="relative flex items-center">
+                    <Search className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder={`Search from ${products.length} products by name, category or SKU…`}
+                      value={productSearch}
+                      onChange={(e) => {
+                        setProductSearch(e.target.value);
+                        setShowProductResults(true);
+                      }}
+                      onFocus={() => setShowProductResults(true)}
+                      className="w-full pl-9 pr-9 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#714B67] focus:ring-2 focus:ring-[#714B67]/10 transition-all"
+                    />
+                    {productSearch && (
+                      <button
+                        type="button"
+                        onClick={() => { setProductSearch(''); setShowProductResults(false); }}
+                        className="absolute right-3 p-0.5 text-slate-400 hover:text-slate-700 cursor-pointer transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Results Dropdown */}
+                  {showProductResults && filteredProducts.length > 0 && (
+                    <div className="absolute z-30 mt-1.5 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
+                      <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[11px] font-semibold text-slate-500">
+                        <span>{productSearch ? `Matching Products (${filteredProducts.length})` : `Catalog Products (Showing ${filteredProducts.length} of ${products.length})`}</span>
+                        <span className="text-slate-400">Click to add to quote</span>
+                      </div>
+                      <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                        {filteredProducts.map((p) => {
+                          const pId = p.id || p._id;
+                          const stockInfo = p.is_subscription
+                            ? 'SaaS — Instant'
+                            : `${p.stock_on_hand ?? 45} in stock`;
+                          const isAlreadyAdded = lines.some((l) => l.product_id === pId);
+                          return (
+                            <button
+                              key={pId}
+                              type="button"
+                              onClick={() => {
+                                addProductToQuote(p);
+                                setProductSearch('');
+                                setShowProductResults(false);
+                              }}
+                              className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-[#714B67]/5 transition-colors text-left cursor-pointer group"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-semibold text-slate-900 truncate">{p.name}</span>
+                                  {p.is_subscription && <Badge variant="brand" className="text-[10px] shrink-0">SaaS</Badge>}
+                                  {isAlreadyAdded && <Badge variant="success" className="text-[10px] shrink-0">In Cart</Badge>}
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-xs text-slate-400">{p.category_name || 'Hardware'}</span>
+                                  <span className="text-slate-300">•</span>
+                                  <span className="text-xs text-slate-400">{stockInfo}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 shrink-0">
+                                <span className="text-sm font-bold text-[#714B67] font-mono">
+                                  ${(p.base_price || p.price)?.toLocaleString()}
+                                </span>
+                                <span className="flex items-center gap-1 text-xs font-bold text-white bg-[#714B67] px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Plus className="w-3 h-3" />
+                                  {isAlreadyAdded ? 'Add More' : 'Add'}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {showProductResults && productSearch && filteredProducts.length === 0 && (
+                    <div className="absolute z-30 mt-1.5 w-full bg-white border border-slate-200 rounded-xl shadow-lg px-4 py-5 text-center text-sm text-slate-500">
+                      No products found for &quot;{productSearch}&quot;
+                    </div>
+                  )}
+
+                  {!productSearch && (
+                    <p className="mt-2 text-xs text-slate-400">
+                      Type to search across <span className="font-semibold text-slate-600">{products.length}</span> catalog products
+                    </p>
+                  )}
                 </div>
               </Card>
             </div>

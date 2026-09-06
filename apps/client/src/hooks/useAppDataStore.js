@@ -74,19 +74,20 @@ export const useAppDataStore = (navigation) => {
   const [approvals, setApprovals] = useState([]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const [categories, setCategories] = useState(mockCategories);
-  const [variants, setVariants] = useState(mockVariants);
-  const [priceLists, setPriceLists] = useState(mockPriceLists);
-  const [warehouses, setWarehouses] = useState(mockWarehouses);
-  const [stock, setStock] = useState(mockStock);
-  const [fulfillmentOrders, setFulfillmentOrders] = useState(mockFulfillmentOrders);
-  const [subscriptions, setSubscriptions] = useState(mockSubscriptions);
-  const [invoices, setInvoices] = useState(mockInvoices);
-  const [alerts, setAlerts] = useState(mockDealHealthAlerts);
+  const [categories, setCategories] = useState([]);
+  const [variants, setVariants] = useState([]);
+  const [priceLists, setPriceLists] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [stock, setStock] = useState([]);
+  const [fulfillmentOrders, setFulfillmentOrders] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [alerts, setAlerts] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [discountTiers, setDiscountTiers] = useState(mockDiscountTiers);
-  const [categoryCeilings, setCategoryCeilings] = useState(mockCategoryDiscountCeilings);
+  const [discountTiers, setDiscountTiers] = useState([]);
+  const [categoryCeilings, setCategoryCeilings] = useState([]);
+  const [upsellRules, setUpsellRules] = useState([]);
 
   // Active targets
   const activeQuote =
@@ -146,7 +147,7 @@ export const useAppDataStore = (navigation) => {
         api.quotations.getAll('limit=500'),
         api.products ? api.products.getAll('limit=500') : Promise.reject(),
         api.approvals ? api.approvals.getAll('limit=500') : Promise.reject(),
-        api.billing ? api.billing.getInvoices() : Promise.reject(),
+        api.billing ? api.billing.getInvoices('limit=1000') : Promise.reject(),
         api.warehouses ? api.warehouses.getAll() : Promise.reject(),
         api.warehouses ? api.warehouses.getAllStock() : Promise.reject(),
         api.fulfillment ? api.fulfillment.getAll() : Promise.reject(),
@@ -913,41 +914,63 @@ export const useAppDataStore = (navigation) => {
     });
   }, [showConfirm, loadBackendData, showAlert]);
 
-  const handleRecordPayment = useCallback((invId, amount) => {
-    showConfirm({
-      title: 'Confirm Payment Record',
-      message: `Record payment of $${amount?.toLocaleString()} for invoice ${invId}?`,
-      confirmText: 'Confirm Payment',
-      variant: 'success',
-      onConfirm: async () => {
-        try {
-          if (invId) {
-            await api.billing.recordPayment(invId, {
-              amount: Number(amount),
-              payment_method: 'bank_transfer',
-              reference: `RECON-${Date.now().toString().slice(-6)}`
-            });
-          }
-          await loadBackendData();
-          showAlert({
-            title: 'Payment Reconciled',
-            message: `Payment of $${amount?.toLocaleString()} recorded and reconciled in database.`,
-            variant: 'success'
-          });
-        } catch (err) {
-          console.warn('Record payment API fallback:', err.message);
-          setInvoices((prev) =>
-            prev.map((inv) => (inv.id === invId || inv._id === invId ? { ...inv, status: 'Paid', payment_stage: 'Paid' } : inv))
-          );
-          showAlert({
-            title: 'Payment Reconciled',
-            message: `Payment of $${amount?.toLocaleString()} recorded successfully.`,
-            variant: 'success'
-          });
-        }
+  const handleRecordPayment = useCallback(async (invId, amount, method = 'bank_transfer') => {
+    try {
+      if (invId) {
+        await api.billing.recordPayment(invId, {
+          amount: Number(amount),
+          amount_paid: Number(amount),
+          method: method || 'bank_transfer',
+          payment_method: method || 'bank_transfer',
+          reference: `RECON-${Date.now().toString().slice(-6)}`
+        });
       }
-    });
-  }, [showConfirm, loadBackendData, showAlert]);
+      await loadBackendData();
+      showAlert({
+        title: 'Payment Reconciled',
+        message: `Payment of $${Number(amount || 0).toLocaleString()} successfully recorded and reconciled in ledger.`,
+        variant: 'success'
+      });
+    } catch (err) {
+      console.warn('Record payment API fallback:', err.message);
+      setInvoices((prev) =>
+        prev.map((inv) => (inv.id === invId || inv._id === invId ? { ...inv, status: 'Paid', payment_stage: 'Paid', balance_due: 0 } : inv))
+      );
+      showAlert({
+        title: 'Payment Reconciled',
+        message: `Payment of $${Number(amount || 0).toLocaleString()} recorded successfully.`,
+        variant: 'success'
+      });
+    }
+  }, [loadBackendData, showAlert]);
+
+  const handleGenerateInvoice = useCallback(async (quotationId) => {
+    try {
+      if (quotationId) {
+        const res = await api.billing.generateInvoice(quotationId);
+        await loadBackendData();
+        showAlert({
+          title: 'Invoice Generated',
+          message: 'Formal Net 30 billing invoice successfully generated and logged in ledger.',
+          variant: 'success'
+        });
+        const newInv = res?.data?.invoice || res?.data;
+        const newInvId = newInv?._id || newInv?.id;
+        if (newInvId) {
+          navigateTo('invoice-detail', newInvId);
+        }
+        return res;
+      }
+    } catch (err) {
+      console.warn('Generate invoice API error:', err.message);
+      showAlert({
+        title: 'Invoice Generation Notice',
+        message: err.message || 'Could not generate invoice for quotation.',
+        variant: 'warning'
+      });
+      throw err;
+    }
+  }, [loadBackendData, showAlert, navigateTo]);
 
   const handleNudgeAlert = useCallback(async (alertId) => {
     try {
@@ -1197,6 +1220,7 @@ export const useAppDataStore = (navigation) => {
     handleManualOverride,
     handleCancelSubscription,
     handleRecordPayment,
+    handleGenerateInvoice,
     handleNudgeAlert,
     handleEscalateAlert,
     handleRecalculateAlerts,

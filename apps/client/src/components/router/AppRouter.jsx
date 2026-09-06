@@ -20,7 +20,22 @@ import { useModal } from '../../context/ModalContext';
 
 export const AppRouter = ({ navigation, dataStore }) => {
   const { showAlert, showConfirm } = useModal();
-  const { currentView, navigateTo, setSelectedQuoteId, setSelectedApprovalId, setSelectedFulfillmentId, setSelectedSubscriptionId, setSelectedInvoiceId, setSelectedProductId } = navigation;
+  const {
+    currentView,
+    navigateTo,
+    selectedQuoteId,
+    setSelectedQuoteId,
+    selectedApprovalId,
+    setSelectedApprovalId,
+    selectedFulfillmentId,
+    setSelectedFulfillmentId,
+    selectedSubscriptionId,
+    setSelectedSubscriptionId,
+    selectedInvoiceId,
+    setSelectedInvoiceId,
+    selectedProductId,
+    setSelectedProductId
+  } = navigation;
   const {
     currentUser,
     quotations,
@@ -60,6 +75,7 @@ export const AppRouter = ({ navigation, dataStore }) => {
     handleManualOverride,
     handleCancelSubscription,
     handleRecordPayment,
+    handleGenerateInvoice,
     handleNudgeAlert,
     handleEscalateAlert,
     handleRecalculateAlerts,
@@ -115,6 +131,9 @@ export const AppRouter = ({ navigation, dataStore }) => {
           products={products}
           customers={customers}
           upsellRules={upsellRules || []}
+          invoices={invoices}
+          onSelectInvoice={(id) => navigateTo('invoice-detail', id)}
+          onGenerateInvoice={handleGenerateInvoice}
           onBack={() => navigateTo('quotations')}
           onSubmitQuote={handleSubmitQuote}
           onSaveDraft={handleSaveDraft}
@@ -210,7 +229,9 @@ export const AppRouter = ({ navigation, dataStore }) => {
       return (
         <InvoicesListView
           invoices={invoices}
+          quotations={quotations}
           onSelectInvoice={(id) => navigateTo('invoice-detail', id)}
+          onGenerateInvoice={handleGenerateInvoice}
         />
       );
 
@@ -218,8 +239,10 @@ export const AppRouter = ({ navigation, dataStore }) => {
       return (
         <InvoiceDetailView
           invoice={activeInvoice}
+          invoiceId={selectedInvoiceId}
           onBack={() => navigateTo('invoices')}
           onRecordPayment={handleRecordPayment}
+          onSelectQuote={(id) => navigateTo('quotation-detail', id)}
         />
       );
 
@@ -268,6 +291,7 @@ export const AppRouter = ({ navigation, dataStore }) => {
             setSelectedProductId(null);
             navigateTo('product-config');
           }}
+          currentUser={currentUser}
         />
       );
 
@@ -281,6 +305,7 @@ export const AppRouter = ({ navigation, dataStore }) => {
           onSaveProduct={handleSaveProduct}
           onAddVariant={handleAddVariant}
           onDeleteVariant={handleDeleteVariant}
+          currentUser={currentUser}
         />
       );
 

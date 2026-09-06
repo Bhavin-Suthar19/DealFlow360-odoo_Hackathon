@@ -110,7 +110,7 @@ export const api = {
     cancel: (id, reason) => request(`/subscriptions/${id}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) })
   },
   billing: {
-    getInvoices: () => request('/billing/invoices'),
+    getInvoices: (query = '') => request(`/billing/invoices${query ? `?${query}` : ''}`),
     getInvoiceById: (id) => request(`/billing/invoices/${id}`),
     generateInvoice: (quotationId) => request('/billing/invoices/generate', { method: 'POST', body: JSON.stringify({ quotation_id: quotationId }) }),
     recordPayment: (id, paymentData) => request(`/billing/invoices/${id}/payments`, { method: 'POST', body: JSON.stringify(paymentData) })
@@ -172,7 +172,7 @@ export const api = {
   getQuotations: (params = '') => request(`/quotations${params ? `?${params}` : ''}`),
   getApprovals: (params = '') => request(`/approvals${params ? `?${params}` : ''}`),
   getProducts: () => request('/products'),
-  getInvoices: () => request('/billing/invoices'),
+  getInvoices: (params = '') => request(`/billing/invoices${params ? `?${params}` : ''}`),
   getAlerts: (params = '') => request(`/deal-health/alerts${params ? `?${params}` : ''}`),
   getAuditLogs: (params = '') => request(`/audit${params ? `?${params}` : ''}`),
   getNotifications: (params = '') => request(`/notifications${params ? `?${params}` : ''}`),

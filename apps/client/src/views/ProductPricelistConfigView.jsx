@@ -12,8 +12,10 @@ export const ProductPricelistConfigView = ({
   onBack,
   onSaveProduct,
   onAddVariant,
-  onDeleteVariant
+  onDeleteVariant,
+  currentUser
 }) => {
+  const isSalesRep = currentUser?.role === 'sales_rep';
   const prodId = product?._id || product?.id;
   const initialCategory = product
     ? (typeof product.category_id === 'object' ? product.category_id?._id : product.category_id)
@@ -88,17 +90,29 @@ export const ProductPricelistConfigView = ({
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              {product ? `Configure: ${product.name}` : 'Create New Product Master'}
+              {isSalesRep
+                ? `Product Details: ${product?.name || 'Product'}`
+                : product
+                  ? `Configure: ${product.name}`
+                  : 'Create New Product Master'}
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Live Database Integration: Master pricing, stock attributes & variant matrix
+              {isSalesRep
+                ? 'Read-only view for Sales Representative • Master pricing & SKU attributes'
+                : 'Live Database Integration: Master pricing, stock attributes & variant matrix'}
             </p>
           </div>
         </div>
 
-        <Button variant="primary" icon={Save} onClick={handleSubmit}>
-          Save Product Configuration
-        </Button>
+        {isSalesRep ? (
+          <Badge variant="purple" className="px-3 py-1.5 text-xs font-semibold">
+            Read-Only (Sales Representative)
+          </Badge>
+        ) : (
+          <Button variant="primary" icon={Save} onClick={handleSubmit}>
+            Save Product Configuration
+          </Button>
+        )}
       </div>
 
       {/* Main Grid */}
@@ -106,7 +120,7 @@ export const ProductPricelistConfigView = ({
         {/* Form Card */}
         <Card title="Product Master Details" subtitle="Connected to MongoDB Products collection" className="lg:col-span-2">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Input label="Product Name" value={name} onChange={(e) => setName(e.target.value)} required />
+            <Input label="Product Name" value={name} onChange={(e) => setName(e.target.value)} required disabled={isSalesRep} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -114,7 +128,8 @@ export const ProductPricelistConfigView = ({
                 <select
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-[#714B67]"
+                  disabled={isSalesRep}
+                  className="w-full bg-white disabled:bg-slate-100 disabled:text-slate-500 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-[#714B67]"
                 >
                   {categories.map((c) => (
                     <option key={c._id || c.id} value={c._id || c.id}>
@@ -124,7 +139,7 @@ export const ProductPricelistConfigView = ({
                 </select>
               </div>
 
-              <Input label="Unit of Measure" value={unit} onChange={(e) => setUnit(e.target.value)} required />
+              <Input label="Unit of Measure" value={unit} onChange={(e) => setUnit(e.target.value)} required disabled={isSalesRep} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -134,6 +149,7 @@ export const ProductPricelistConfigView = ({
                 value={basePrice}
                 onChange={(e) => setBasePrice(e.target.value)}
                 required
+                disabled={isSalesRep}
               />
               <Input
                 label="Available Stock"
@@ -141,8 +157,9 @@ export const ProductPricelistConfigView = ({
                 value={stockOnHand}
                 onChange={(e) => setStockOnHand(e.target.value)}
                 required
+                disabled={isSalesRep}
               />
-              <Input label="Tax Rate (%)" type="number" value={taxPct} onChange={(e) => setTaxPct(e.target.value)} required />
+              <Input label="Tax Rate (%)" type="number" value={taxPct} onChange={(e) => setTaxPct(e.target.value)} required disabled={isSalesRep} />
             </div>
 
             {/* Dynamic Subscription Toggle */}
@@ -154,8 +171,11 @@ export const ProductPricelistConfigView = ({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setIsSubscription(!isSubscription)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                  onClick={() => !isSalesRep && setIsSubscription(!isSubscription)}
+                  disabled={isSalesRep}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    isSalesRep ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                  } ${
                     isSubscription ? 'bg-[#714B67]' : 'bg-slate-300'
                   }`}
                 >
@@ -174,7 +194,8 @@ export const ProductPricelistConfigView = ({
                   <select
                     value={recurringCycle}
                     onChange={(e) => setRecurringCycle(e.target.value)}
-                    className="bg-white border border-[#714B67]/50 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-[#714B67]"
+                    disabled={isSalesRep}
+                    className="bg-white disabled:bg-slate-100 border border-[#714B67]/50 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-[#714B67]"
                   >
                     <option value="monthly">Monthly Cycle</option>
                     <option value="quarterly">Quarterly Cycle</option>
@@ -189,7 +210,8 @@ export const ProductPricelistConfigView = ({
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-xs text-slate-900 focus:outline-none focus:border-[#714B67]"
+                disabled={isSalesRep}
+                className="w-full bg-white disabled:bg-slate-100 disabled:text-slate-500 border border-slate-300 rounded-lg p-3 text-xs text-slate-900 focus:outline-none focus:border-[#714B67]"
                 rows={3}
               />
             </div>
@@ -226,7 +248,7 @@ export const ProductPricelistConfigView = ({
                         <Badge variant={v.extra_price > 0 ? 'success' : 'default'}>
                           {v.extra_price > 0 ? `+$${v.extra_price.toLocaleString()}` : '$0 (Standard)'}
                         </Badge>
-                        {onDeleteVariant && (
+                        {!isSalesRep && onDeleteVariant && (
                           <button
                             type="button"
                             onClick={() => onDeleteVariant(varId)}
@@ -243,52 +265,54 @@ export const ProductPricelistConfigView = ({
               )}
             </div>
 
-            {/* Add Variant Form */}
-            {isAddingVariant ? (
-              <form onSubmit={handleCreateVariant} className="mt-4 p-3 bg-purple-50/50 border border-[#714B67]/20 rounded-xl space-y-3">
-                <span className="text-xs font-bold text-[#714B67] block">Add Database Attribute Variant</span>
-                <div className="grid grid-cols-2 gap-2">
+            {/* Add Variant Form: Only visible to Admins/Managers, NOT Sales Reps */}
+            {!isSalesRep && (
+              isAddingVariant ? (
+                <form onSubmit={handleCreateVariant} className="mt-4 p-3 bg-purple-50/50 border border-[#714B67]/20 rounded-xl space-y-3">
+                  <span className="text-xs font-bold text-[#714B67] block">Add Database Attribute Variant</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      placeholder="e.g. RAM, Color"
+                      value={newAttrName}
+                      onChange={(e) => setNewAttrName(e.target.value)}
+                      required
+                    />
+                    <Input
+                      placeholder="e.g. 128GB ECC"
+                      value={newAttrVal}
+                      onChange={(e) => setNewAttrVal(e.target.value)}
+                      required
+                    />
+                  </div>
                   <Input
-                    placeholder="e.g. RAM, Color"
-                    value={newAttrName}
-                    onChange={(e) => setNewAttrName(e.target.value)}
-                    required
+                    label="Extra Price ($)"
+                    type="number"
+                    value={newExtraPrice}
+                    onChange={(e) => setNewExtraPrice(e.target.value)}
                   />
-                  <Input
-                    placeholder="e.g. 128GB ECC"
-                    value={newAttrVal}
-                    onChange={(e) => setNewAttrVal(e.target.value)}
-                    required
-                  />
-                </div>
-                <Input
-                  label="Extra Price ($)"
-                  type="number"
-                  value={newExtraPrice}
-                  onChange={(e) => setNewExtraPrice(e.target.value)}
-                />
-                <div className="flex items-center justify-end gap-2 pt-1">
-                  <Button size="sm" variant="ghost" onClick={() => setIsAddingVariant(false)}>
-                    Cancel
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <Button size="sm" variant="ghost" onClick={() => setIsAddingVariant(false)}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" variant="primary" icon={Check} disabled={isSavingVariant}>
+                      {isSavingVariant ? 'Saving...' : 'Save to DB'}
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="mt-4 pt-3 border-t border-slate-200">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    icon={Plus}
+                    className="w-full"
+                    onClick={() => setIsAddingVariant(true)}
+                    disabled={!prodId}
+                  >
+                    {prodId ? 'Add Attribute Variant' : 'Save Product First to Add Variants'}
                   </Button>
-                  <Button size="sm" variant="primary" icon={Check} disabled={isSavingVariant}>
-                    {isSavingVariant ? 'Saving...' : 'Save to DB'}
-                  </Button>
                 </div>
-              </form>
-            ) : (
-              <div className="mt-4 pt-3 border-t border-slate-200">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  icon={Plus}
-                  className="w-full"
-                  onClick={() => setIsAddingVariant(true)}
-                  disabled={!prodId}
-                >
-                  {prodId ? 'Add Attribute Variant' : 'Save Product First to Add Variants'}
-                </Button>
-              </div>
+              )
             )}
           </Card>
         </div>

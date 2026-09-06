@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import { Building2, Lock, Mail, ShieldCheck, User, Users, AlertTriangle } from 'lucide-react';
+import { Building2, Lock, Mail, ShieldCheck, User, Users, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { useModal } from '../context/ModalContext';
 import { api, setAuthToken } from '../services/api';
 
@@ -13,12 +13,15 @@ export const LoginView = ({ onLoginSuccess }) => {
   // Login Form States
   const [loginEmail, setLoginEmail] = useState('alex.j@dealflow360.com');
   const [loginPassword, setLoginPassword] = useState('password123');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
 
   // Sign Up Form States
   const [fullName, setFullName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [signupError, setSignupError] = useState('');
 
   // Lockout tracking
@@ -168,14 +171,24 @@ export const LoginView = ({ onLoginSuccess }) => {
                 onChange={(e) => setLoginEmail(e.target.value)}
                 required
               />
-              <Input
-                label="Password"
-                type="password"
-                icon={Lock}
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                required
-              />
+              <div className="relative">
+                <Input
+                  label="Password"
+                  type={showLoginPassword ? 'text' : 'password'}
+                  icon={Lock}
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword((v) => !v)}
+                  className="absolute right-3 bottom-2 p-1 text-slate-400 hover:text-[#714B67] cursor-pointer transition-colors"
+                  tabIndex={-1}
+                >
+                  {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
 
               <Button type="submit" variant="primary" className="w-full mt-2" icon={ShieldCheck} disabled={isLocked}>
                 Sign In to Platform
@@ -203,24 +216,44 @@ export const LoginView = ({ onLoginSuccess }) => {
                 required
               />
 
-              <Input
-                label="Password"
-                type="password"
-                icon={Lock}
-                value={signupPassword}
-                onChange={(e) => setSignupPassword(e.target.value)}
-                required
-              />
+              <div className="relative">
+                <Input
+                  label="Password"
+                  type={showSignupPassword ? 'text' : 'password'}
+                  icon={Lock}
+                  value={signupPassword}
+                  onChange={(e) => setSignupPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSignupPassword((v) => !v)}
+                  className="absolute right-3 bottom-2 p-1 text-slate-400 hover:text-[#714B67] cursor-pointer transition-colors"
+                  tabIndex={-1}
+                >
+                  {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
 
-              <Input
-                label="Confirm Password"
-                type="password"
-                icon={Lock}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                error={signupError}
-                required
-              />
+              <div className="relative">
+                <Input
+                  label="Confirm Password"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  icon={Lock}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  error={signupError}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="absolute right-3 bottom-2 p-1 text-slate-400 hover:text-[#714B67] cursor-pointer transition-colors"
+                  tabIndex={-1}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
 
               <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-xs text-purple-900 font-medium">
                 Public signups are automatically provisioned with <strong>Customer Account</strong> access. Internal staff accounts (Sales Rep, Manager, Finance Ops) are created by System Administrators.
