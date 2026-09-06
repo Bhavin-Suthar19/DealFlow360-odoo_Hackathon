@@ -83,7 +83,9 @@ export const AppRouter = ({ navigation, dataStore }) => {
     handleAddVariant,
     handleDeleteVariant,
     handleSaveDiscountConfig,
-    customers
+    customers,
+    updateProfile,
+    handleUpdateProfile
   } = dataStore;
 
   switch (currentView) {
@@ -340,7 +342,7 @@ export const AppRouter = ({ navigation, dataStore }) => {
       );
 
     case 'profile':
-      return <UserProfileView currentUser={currentUser} />;
+      return <UserProfileView currentUser={currentUser} onUpdateProfile={updateProfile || handleUpdateProfile} />;
 
     default:
       return null;

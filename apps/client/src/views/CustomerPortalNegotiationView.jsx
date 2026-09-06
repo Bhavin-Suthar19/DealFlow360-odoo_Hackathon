@@ -26,12 +26,19 @@ import {
   Info,
   Check,
   Tag,
-  Clock
+  Clock,
+  Search,
+  X,
+  List,
+  LayoutGrid
 } from 'lucide-react';
 import { useModal } from '../context/ModalContext';
 import { api } from '../services/api';
+import Pagination from '../components/ui/Pagination';
+import usePagination from '../hooks/usePagination';
 
 export const CustomerPortalNegotiationView = ({
+  currentUser,
   quote,
   quotations = [],
   onSelectQuote,
@@ -39,7 +46,8 @@ export const CustomerPortalNegotiationView = ({
   onLogout,
   onSubmitNegotiation,
   onConfirmQuote,
-  onRefreshData
+  onRefreshData,
+  onUpdateProfile
 }) => {
   const { showAlert } = useModal();
   const [activePortalTab, setActivePortalTab] = useState('quote');
@@ -48,6 +56,45 @@ export const CustomerPortalNegotiationView = ({
   const [rfqCart, setRfqCart] = useState([]);
   const [rfqNotes, setRfqNotes] = useState('');
   const [selectedProduct, setSelectedProduct] = useState('');
+  const [rfqSearch, setRfqSearch] = useState('');
+  const [rfqCategory, setRfqCategory] = useState('All');
+  const [rfqViewMode, setRfqViewMode] = useState('list'); // 'list' | 'grid'
+
+  const rfqCategories = useMemo(() => {
+    const cats = new Set(products.map((p) => p.category_name).filter(Boolean));
+    return ['All', ...Array.from(cats)];
+  }, [products]);
+
+  const filteredCatalogProducts = useMemo(() => {
+    return products.filter((p) => {
+      const matchesCat = rfqCategory === 'All' || p.category_name === rfqCategory;
+      if (!matchesCat) return false;
+      if (!rfqSearch.trim()) return true;
+      const q = rfqSearch.toLowerCase().trim();
+      for (const key of Object.keys(p || {})) {
+        const val = p[key];
+        if (typeof val === 'string' && val.toLowerCase().includes(q)) return true;
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          for (const subKey of Object.keys(val)) {
+            const subVal = val[subKey];
+            if (typeof subVal === 'string' && subVal.toLowerCase().includes(q)) return true;
+          }
+        }
+      }
+      return false;
+    });
+  }, [products, rfqCategory, rfqSearch]);
+
+  const {
+    currentPage: rfqPage,
+    pageSize: rfqPageSize,
+    totalPages: totalRfqPages,
+    totalItems: totalRfqItems,
+    paginatedItems: paginatedCatalogProducts,
+    onPageChange: onRfqPageChange,
+    onPageSizeChange: onRfqPageSizeChange,
+    resetPage: resetRfqPage
+  } = usePagination(filteredCatalogProducts, 6);
 
   // Counter Negotiation state
   const [counterDiscount, setCounterDiscount] = useState('15');
@@ -254,11 +301,25 @@ export const CustomerPortalNegotiationView = ({
     );
   }
 
-  const customerUser = {
-    name: quote.customer_name || 'Acme Global Industries',
-    role: 'customer',
-    email: 'billing@acme.com'
-  };
+  const customerUser = useMemo(() => {
+    if (currentUser) {
+      return {
+        ...currentUser,
+        role: 'customer',
+        name: currentUser.name || quote.customer_name || 'Customer Account',
+        email: currentUser.email || quote.customer_email || '',
+        phone: currentUser.phone || '',
+        company_name: currentUser.company_name || quote.customer_name || ''
+      };
+    }
+    return {
+      role: 'customer',
+      name: quote.customer_name || 'Customer Account',
+      email: quote.customer_email || '',
+      phone: '',
+      company_name: quote.customer_name || ''
+    };
+  }, [currentUser, quote]);
 
   const customerQuotes = quotations.filter(
     (q) =>
@@ -272,6 +333,7 @@ export const CustomerPortalNegotiationView = ({
       {/* Customer Portal Top Nav */}
       <CustomerPortalNavbar
         customerName={quote.customer_name}
+        userEmail={customerUser.email || currentUser?.email || ''}
         onLogout={onLogout}
         activeTab={activePortalTab}
         onNavigate={setActivePortalTab}
@@ -279,7 +341,7 @@ export const CustomerPortalNegotiationView = ({
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 flex-1 w-full">
         {activePortalTab === 'profile' ? (
-          <UserProfileView currentUser={customerUser} />
+          <UserProfileView currentUser={customerUser} onUpdateProfile={onUpdateProfile} />
         ) : activePortalTab === 'rfq' ? (
           <div className="space-y-6">
             {/* RFQ Header */}
@@ -305,60 +367,219 @@ export const CustomerPortalNegotiationView = ({
               title="Product Catalog"
               subtitle="Browse standard hardware, cloud suites, and professional services"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {products.map((product) => {
-                  const inCart = rfqCart.find((i) => i.product_id === product.id);
-                  return (
-                    <div
-                      key={product.id}
-                      className="border border-slate-200 rounded-xl p-4 bg-white hover:border-[#714B67]/40 hover:shadow-xs transition-all flex flex-col justify-between"
-                    >
-                      <div>
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h4 className="text-sm font-bold text-slate-900">{product.name}</h4>
-                          <Badge variant="purple">{product.category_name || 'Hardware'}</Badge>
-                        </div>
-                        <p className="text-xs text-slate-500 mb-3 line-clamp-2">
-                          {product.description || 'Enterprise grade infrastructure package.'}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                        <div>
-                          <span className="text-base font-black text-slate-900">
-                            ${(product.base_price || product.price)?.toLocaleString()}
-                          </span>
-                          <span className="text-[11px] text-slate-400 block">
-                            per {product.unit || 'unit'}
-                          </span>
-                        </div>
-                        {inCart ? (
-                          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-                            <button
-                              type="button"
-                              onClick={() => updateCartQty(product.id, -1)}
-                              className="p-1 hover:bg-slate-200 rounded text-slate-700"
-                            >
-                              <Minus className="w-3.5 h-3.5" />
-                            </button>
-                            <span className="text-xs font-bold w-6 text-center">{inCart.qty}</span>
-                            <button
-                              type="button"
-                              onClick={() => updateCartQty(product.id, 1)}
-                              className="p-1 hover:bg-slate-200 rounded text-slate-700"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <Button size="sm" variant="outline" icon={Plus} onClick={() => addToCart(product)}>
-                            Add to RFQ
-                          </Button>
-                        )}
-                      </div>
+              <div className="space-y-4">
+                {/* Search and Category Filters */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search catalog by name, sku, or description..."
+                      value={rfqSearch}
+                      onChange={(e) => {
+                        setRfqSearch(e.target.value);
+                        resetRfqPage();
+                      }}
+                      className="w-full pl-9 pr-8 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#714B67] text-slate-800 placeholder-slate-400"
+                    />
+                    {rfqSearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRfqSearch('');
+                          resetRfqPage();
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                      {rfqCategories.map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => {
+                            setRfqCategory(cat);
+                            resetRfqPage();
+                          }}
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
+                            rfqCategory === cat
+                              ? 'bg-[#714B67] text-white'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
                     </div>
-                  );
-                })}
+
+                    {/* Layout switcher */}
+                    <div className="flex items-center bg-slate-100 border border-slate-200 rounded-lg p-0.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setRfqViewMode('list')}
+                        title="List layout"
+                        className={`p-1.5 rounded text-xs font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                          rfqViewMode === 'list' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <List className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRfqViewMode('grid')}
+                        title="Grid / Card layout"
+                        className={`p-1.5 rounded text-xs font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                          rfqViewMode === 'grid' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <LayoutGrid className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {paginatedCatalogProducts.length === 0 ? (
+                  <div className="py-12 text-center text-slate-500 text-sm">
+                    No products found matching &ldquo;{rfqSearch}&rdquo;. Try clearing filters.
+                  </div>
+                ) : rfqViewMode === 'list' ? (
+                  /* List Layout Table */
+                  <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table className="w-full text-left text-sm text-slate-800">
+                      <thead className="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-200">
+                        <tr>
+                          <th className="py-3 px-4">Product Details</th>
+                          <th className="py-3 px-4">Category</th>
+                          <th className="py-3 px-4 text-right">Unit Price</th>
+                          <th className="py-3 px-4 text-center">Unit</th>
+                          <th className="py-3 px-4 text-right">Order / RFQ</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {paginatedCatalogProducts.map((product) => {
+                          const inCart = rfqCart.find((i) => i.product_id === product.id);
+                          return (
+                            <tr key={product.id} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="py-3 px-4">
+                                <div className="font-bold text-slate-900">{product.name}</div>
+                                <div className="text-xs text-slate-500 line-clamp-1">
+                                  {product.description || 'Enterprise grade infrastructure package.'}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <Badge variant="purple">{product.category_name || 'Hardware'}</Badge>
+                              </td>
+                              <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                                ${(product.base_price || product.price)?.toLocaleString()}
+                              </td>
+                              <td className="py-3 px-4 text-center text-xs text-slate-500">
+                                {product.unit || 'unit'}
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                {inCart ? (
+                                  <div className="inline-flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => updateCartQty(product.id, -1)}
+                                      className="p-1 hover:bg-slate-200 rounded text-slate-700"
+                                    >
+                                      <Minus className="w-3.5 h-3.5" />
+                                    </button>
+                                    <span className="text-xs font-bold w-6 text-center">{inCart.qty}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateCartQty(product.id, 1)}
+                                      className="p-1 hover:bg-slate-200 rounded text-slate-700"
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <Button size="sm" variant="outline" icon={Plus} onClick={() => addToCart(product)}>
+                                    Add
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  /* Grid / Card Layout */
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {paginatedCatalogProducts.map((product) => {
+                      const inCart = rfqCart.find((i) => i.product_id === product.id);
+                      return (
+                        <div
+                          key={product.id}
+                          className="border border-slate-200 rounded-xl p-4 bg-white hover:border-[#714B67]/40 hover:shadow-xs transition-all flex flex-col justify-between"
+                        >
+                          <div>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <h4 className="text-sm font-bold text-slate-900">{product.name}</h4>
+                              <Badge variant="purple">{product.category_name || 'Hardware'}</Badge>
+                            </div>
+                            <p className="text-xs text-slate-500 mb-3 line-clamp-2">
+                              {product.description || 'Enterprise grade infrastructure package.'}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                            <div>
+                              <span className="text-base font-black text-slate-900">
+                                ${(product.base_price || product.price)?.toLocaleString()}
+                              </span>
+                              <span className="text-[11px] text-slate-400 block">
+                                per {product.unit || 'unit'}
+                              </span>
+                            </div>
+                            {inCart ? (
+                              <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+                                <button
+                                  type="button"
+                                  onClick={() => updateCartQty(product.id, -1)}
+                                  className="p-1 hover:bg-slate-200 rounded text-slate-700"
+                                >
+                                  <Minus className="w-3.5 h-3.5" />
+                                </button>
+                                <span className="text-xs font-bold w-6 text-center">{inCart.qty}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => updateCartQty(product.id, 1)}
+                                  className="p-1 hover:bg-slate-200 rounded text-slate-700"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <Button size="sm" variant="outline" icon={Plus} onClick={() => addToCart(product)}>
+                                Add to RFQ
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Catalog Pagination */}
+                <div className="pt-2 border-t border-slate-100">
+                  <Pagination
+                    currentPage={rfqPage}
+                    totalPages={totalRfqPages}
+                    totalItems={totalRfqItems}
+                    pageSize={rfqPageSize}
+                    onPageChange={onRfqPageChange}
+                    onPageSizeChange={onRfqPageSizeChange}
+                  />
+                </div>
               </div>
             </Card>
 

@@ -61,11 +61,14 @@ export const api = {
     refresh: () => request('/auth/refresh', { method: 'POST' }),
     me: () => request('/auth/me'),
     portalLogin: (credentials) => request('/auth/portal/login', { method: 'POST', body: JSON.stringify(credentials) }),
-    logout: () => request('/auth/logout', { method: 'POST' })
+    logout: () => request('/auth/logout', { method: 'POST' }),
+    updateProfile: (data) => request('/auth/profile', { method: 'PATCH', body: JSON.stringify(data) })
   },
   users: {
     provision: (userData) => request('/users/provision', { method: 'POST', body: JSON.stringify(userData) }),
-    getAll: () => request('/users')
+    getAll: () => request('/users'),
+    getProfile: () => request('/users/profile'),
+    updateProfile: (data) => request('/users/profile', { method: 'PATCH', body: JSON.stringify(data) })
   },
   quotations: {
     getAll: (params = '') => request(`/quotations${params ? `?${params}` : ''}`),

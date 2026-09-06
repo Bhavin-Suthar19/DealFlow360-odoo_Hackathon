@@ -36,17 +36,24 @@ export const InvoicesListView = ({ invoices = [], quotations = [], onSelectInvoi
     );
   }, [quotations, invoices]);
 
-  // Filter invoices by tab & search query
+  // Filter invoices by tab & search query across all string columns
   const filteredInvoices = useMemo(() => {
-    return invoices.filter((i) => {
-      const matchesTab = activeTab === 'All' || i.status === activeTab;
+    return invoices.filter((item) => {
+      const matchesTab = activeTab === 'All' || item.status === activeTab;
+      if (!matchesTab) return false;
+      if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase().trim();
-      const quoteNum = (i.quote_number || i.quotation_id?.quote_number || '').toLowerCase();
-      const custName = (i.customer_name || i.customer_id?.name || i.customer_id?.company_name || '').toLowerCase();
-      const invNum = (i.invoice_number || '').toLowerCase();
-
-      const matchesSearch = !q || invNum.includes(q) || quoteNum.includes(q) || custName.includes(q);
-      return matchesTab && matchesSearch;
+      for (const key of Object.keys(item || {})) {
+        const val = item[key];
+        if (typeof val === 'string' && val.toLowerCase().includes(q)) return true;
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          for (const subKey of Object.keys(val)) {
+            const subVal = val[subKey];
+            if (typeof subVal === 'string' && subVal.toLowerCase().includes(q)) return true;
+          }
+        }
+      }
+      return false;
     });
   }, [invoices, activeTab, searchQuery]);
 

@@ -14,9 +14,13 @@ import {
   AlertCircle,
   FileSpreadsheet,
   Layers,
-  ArrowUpRight
+  ArrowUpRight,
+  Search,
+  X
 } from 'lucide-react';
 import { useModal } from '../context/ModalContext';
+import Pagination from '../components/ui/Pagination';
+import usePagination from '../hooks/usePagination';
 
 export const ReportingDashboardView = ({
   quotations = [],
@@ -129,6 +133,31 @@ export const ReportingDashboardView = ({
       };
     });
   }, [filteredQuotations]);
+
+  const [repSearchQuery, setRepSearchQuery] = useState('');
+
+  const filteredRepPerformance = useMemo(() => {
+    if (!repSearchQuery.trim()) return repPerformance;
+    const q = repSearchQuery.toLowerCase().trim();
+    return repPerformance.filter((item) => {
+      for (const key of Object.keys(item || {})) {
+        const val = item[key];
+        if (typeof val === 'string' && val.toLowerCase().includes(q)) return true;
+      }
+      return false;
+    });
+  }, [repPerformance, repSearchQuery]);
+
+  const {
+    currentPage: repPage,
+    pageSize: repPageSize,
+    totalPages: totalRepPages,
+    totalItems: totalReps,
+    paginatedItems: paginatedRepPerformance,
+    onPageChange: onRepPageChange,
+    onPageSizeChange: onRepPageSizeChange,
+    resetPage: resetRepPage
+  } = usePagination(filteredRepPerformance, 5);
 
   // Dynamic Pipeline Stage Distribution
   const stageDistribution = useMemo(() => {
@@ -333,6 +362,37 @@ export const ReportingDashboardView = ({
         title="Sales Representative Performance & Governance Compliance"
         subtitle={`Computed dynamically from ${filteredQuotations.length} quotes across ${repPerformance.length} representatives`}
       >
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              value={repSearchQuery}
+              onChange={(e) => {
+                setRepSearchQuery(e.target.value);
+                resetRepPage();
+              }}
+              placeholder="Search rep by name or rating..."
+              className="w-full pl-10 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#714B67] transition-all"
+            />
+            {repSearchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setRepSearchQuery('');
+                  resetRepPage();
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <span className="text-xs text-slate-500">
+            Showing <strong>{paginatedRepPerformance.length}</strong> of <strong>{filteredRepPerformance.length}</strong> representatives
+          </span>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-700">
             <thead className="text-xs uppercase bg-slate-100 text-slate-500 border-b border-slate-200">
@@ -346,14 +406,14 @@ export const ReportingDashboardView = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {repPerformance.length === 0 ? (
+              {paginatedRepPerformance.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-slate-400 italic">
                     No sales data available for selected filter.
                   </td>
                 </tr>
               ) : (
-                repPerformance.map((rep) => {
+                paginatedRepPerformance.map((rep) => {
                   const complianceBadge =
                     rep.avgDiscount <= 10
                       ? { label: 'Excellent Compliance', variant: 'success' }
@@ -386,6 +446,15 @@ export const ReportingDashboardView = ({
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={repPage}
+          totalPages={totalRepPages}
+          totalItems={totalReps}
+          pageSize={repPageSize}
+          onPageChange={onRepPageChange}
+          onPageSizeChange={onRepPageSizeChange}
+        />
       </Card>
     </div>
   );

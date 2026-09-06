@@ -1,14 +1,47 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Pagination from '../components/ui/Pagination';
 import usePagination from '../hooks/usePagination';
-import { LayoutGrid, List, Plus, ArrowRight, Percent, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
+import {
+  LayoutGrid,
+  List,
+  Plus,
+  ArrowRight,
+  Percent,
+  ChevronLeft,
+  ChevronRight,
+  SlidersHorizontal,
+  Search,
+  X
+} from 'lucide-react';
 
 export const QuotationsKanbanView = ({ quotations = [], currentUser = {}, onSelectQuote, onCreateQuote }) => {
   const [viewMode, setViewMode] = useState('kanban');
+  const [searchQuery, setSearchQuery] = useState('');
   const sliderRef = useRef(null);
+
+  // Search across any string column/property of the quotation
+  const filteredQuotes = useMemo(() => {
+    if (!searchQuery.trim()) return quotations;
+    const q = searchQuery.toLowerCase().trim();
+    return quotations.filter((item) => {
+      // Direct string fields
+      for (const key of Object.keys(item || {})) {
+        const val = item[key];
+        if (typeof val === 'string' && val.toLowerCase().includes(q)) return true;
+        // Nested object string fields (e.g. customer_id.name)
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          for (const subKey of Object.keys(val)) {
+            const subVal = val[subKey];
+            if (typeof subVal === 'string' && subVal.toLowerCase().includes(q)) return true;
+          }
+        }
+      }
+      return false;
+    });
+  }, [quotations, searchQuery]);
 
   const {
     currentPage,
@@ -17,8 +50,9 @@ export const QuotationsKanbanView = ({ quotations = [], currentUser = {}, onSele
     totalItems,
     paginatedItems: paginatedQuotes,
     onPageChange,
-    onPageSizeChange
-  } = usePagination(quotations, 10);
+    onPageSizeChange,
+    resetPage
+  } = usePagination(filteredQuotes, 10);
 
   const scrollSlider = (direction) => {
     if (sliderRef.current) {
@@ -107,20 +141,64 @@ export const QuotationsKanbanView = ({ quotations = [], currentUser = {}, onSele
         </div>
       </div>
 
+      {/* Global Search Bar */}
+      <Card className="p-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-lg">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                resetPage();
+              }}
+              placeholder="Search quotations by quote #, customer, rep, status, tier, terms..."
+              className="w-full pl-10 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#714B67] transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  resetPage();
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <div className="text-xs text-slate-500 font-medium">
+            Showing <strong className="text-slate-800">{paginatedQuotes.length}</strong> of{' '}
+            <strong className="text-slate-800">{filteredQuotes.length}</strong> deals
+            {searchQuery && (
+              <span> matching &ldquo;<span className="text-[#714B67] font-semibold">{searchQuery}</span>&rdquo;</span>
+            )}
+          </div>
+        </div>
+      </Card>
+
       {/* View Rendering */}
       {viewMode === 'kanban' ? (
-        <div className="space-y-2">
+        <div className="space-y-4">
           <div
             ref={sliderRef}
             className="flex items-start gap-4 overflow-x-auto pb-4 pt-1 no-scrollbar scroll-smooth"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {columns.map((col) => {
-              const colQuotes = quotations.filter((q) => {
+              const colQuotes = paginatedQuotes.filter((q) => {
                 if (col.id === 'Approved') return q.status === 'Approved' || q.status === 'Confirmed';
                 if (col.id === 'Under Negotiation') return q.status === 'Under Negotiation' || q.status === 'Negotiation';
                 return q.status === col.id;
               });
+
+              const totalInStage = filteredQuotes.filter((q) => {
+                if (col.id === 'Approved') return q.status === 'Approved' || q.status === 'Confirmed';
+                if (col.id === 'Under Negotiation') return q.status === 'Under Negotiation' || q.status === 'Negotiation';
+                return q.status === col.id;
+              }).length;
 
               return (
                 <div
@@ -130,14 +208,14 @@ export const QuotationsKanbanView = ({ quotations = [], currentUser = {}, onSele
                   <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/80">
                     <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">{col.title}</h3>
                     <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-white/80 border border-slate-200 text-slate-700 shadow-2xs">
-                      {colQuotes.length}
+                      {colQuotes.length} <span className="text-[10px] text-slate-400 font-normal">/ {totalInStage}</span>
                     </span>
                   </div>
 
                   <div className="flex flex-col gap-3 min-h-[360px]">
                     {colQuotes.length === 0 ? (
                       <div className="h-full flex items-center justify-center text-xs text-slate-400 italic py-16 bg-white/40 rounded-xl border border-dashed border-slate-300/60">
-                        No deals in {col.title}
+                        No deals on this page
                       </div>
                     ) : (
                       colQuotes.map((q) => {
@@ -208,6 +286,18 @@ export const QuotationsKanbanView = ({ quotations = [], currentUser = {}, onSele
               </button>
             </div>
           </div>
+
+          {/* Kanban Pagination */}
+          <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={onPageChange}
+              onPageSizeChange={onPageSizeChange}
+            />
+          </div>
         </div>
       ) : (
         <Card>
@@ -229,7 +319,7 @@ export const QuotationsKanbanView = ({ quotations = [], currentUser = {}, onSele
                 {paginatedQuotes.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-8 text-center text-slate-500 italic">
-                      No quotations found.
+                      {searchQuery ? `No quotations matching "${searchQuery}".` : 'No quotations found.'}
                     </td>
                   </tr>
                 ) : (

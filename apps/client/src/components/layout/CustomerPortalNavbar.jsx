@@ -3,6 +3,7 @@ import { Building2, FileText, ShoppingBag, User, LogOut } from 'lucide-react';
 
 export const CustomerPortalNavbar = ({
   customerName = 'Acme Global Industries',
+  userEmail = '',
   onLogout,
   activeTab = 'quote',
   onNavigate
@@ -27,7 +28,7 @@ export const CustomerPortalNavbar = ({
                 DealFlow<span className="text-[#714B67]">360</span>
               </span>
               <span className="block text-[10px] text-[#714B67] uppercase tracking-widest font-extrabold">
-                Customer Negotiation & Self-Service Portal
+                {userEmail ? `${userEmail} • Customer Portal` : 'Customer Negotiation & Self-Service Portal'}
               </span>
             </div>
           </div>
@@ -42,7 +43,9 @@ export const CustomerPortalNavbar = ({
                 <User className="w-4 h-4 text-white" />
               </div>
               <div className="text-left hidden sm:block">
-                <span className="block text-xs font-bold text-slate-800 group-hover:text-[#714B67]">{customerName}</span>
+                <span className="block text-xs font-bold text-slate-800 group-hover:text-[#714B67]">
+                  {userEmail || customerName}
+                </span>
                 <span className="block text-[10px] text-[#714B67] font-semibold uppercase tracking-wider">
                   Customer Account
                 </span>

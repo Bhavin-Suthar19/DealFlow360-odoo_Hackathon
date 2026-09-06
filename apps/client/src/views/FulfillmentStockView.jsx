@@ -12,22 +12,37 @@ export const FulfillmentStockView = ({ stock = [], fulfillmentOrders = [], onSel
 
   const filteredStock = useMemo(() => {
     if (!stockSearch.trim()) return stock;
-    const q = stockSearch.toLowerCase();
+    const q = stockSearch.toLowerCase().trim();
     return stock.filter((st) => {
-      const whName = (st.warehouse_name || st.warehouse_id?.name || '').toLowerCase();
-      const pName = (st.product_name || st.product_id?.name || '').toLowerCase();
-      return whName.includes(q) || pName.includes(q);
+      for (const key of Object.keys(st || {})) {
+        const val = st[key];
+        if (typeof val === 'string' && val.toLowerCase().includes(q)) return true;
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          for (const subKey of Object.keys(val)) {
+            const subVal = val[subKey];
+            if (typeof subVal === 'string' && subVal.toLowerCase().includes(q)) return true;
+          }
+        }
+      }
+      return false;
     });
   }, [stock, stockSearch]);
 
   const filteredOrders = useMemo(() => {
     if (!orderSearch.trim()) return fulfillmentOrders;
-    const q = orderSearch.toLowerCase();
+    const q = orderSearch.toLowerCase().trim();
     return fulfillmentOrders.filter((fo) => {
-      const qNum = (fo.quote_number || fo.quotation_id?.quote_number || '').toLowerCase();
-      const cName = (fo.customer_name || fo.quotation_id?.customer_name || fo.quotation_id?.customer_id?.name || '').toLowerCase();
-      const oId = (fo._id || fo.id || '').toLowerCase();
-      return qNum.includes(q) || cName.includes(q) || oId.includes(q);
+      for (const key of Object.keys(fo || {})) {
+        const val = fo[key];
+        if (typeof val === 'string' && val.toLowerCase().includes(q)) return true;
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          for (const subKey of Object.keys(val)) {
+            const subVal = val[subKey];
+            if (typeof subVal === 'string' && subVal.toLowerCase().includes(q)) return true;
+          }
+        }
+      }
+      return false;
     });
   }, [fulfillmentOrders, orderSearch]);
 

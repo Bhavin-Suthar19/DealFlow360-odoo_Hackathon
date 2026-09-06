@@ -21,25 +21,33 @@ export const ProductCatalogView = ({
   const isSalesRep = currentUser?.role === 'sales_rep';
   const isAdmin = currentUser?.role === 'admin' || !currentUser?.role;
 
-  // Filter products by search query and category
+  // Filter products by search query across all string columns and category
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      const q = searchQuery.toLowerCase().trim();
       const catMatch = categories.find((c) => (c._id || c.id) === (p.category_id?._id || p.category_id));
       const catName = p.category_name || (typeof p.category_id === 'object' ? p.category_id?.name : catMatch?.name || (p.category_id === 'cat-1' ? 'Hardware' : p.category_id === 'cat-2' ? 'SaaS Subscriptions' : p.category_id === 'cat-3' ? 'Professional Services' : p.category_id || 'General'));
 
       const pCatId = p.category_id?._id || p.category_id;
       const matchesCategory = selectedCategoryId === 'all' || pCatId === selectedCategoryId || catName.toLowerCase() === selectedCategoryId.toLowerCase();
+      if (!matchesCategory) return false;
 
-      const matchesQuery = !q || (
-        p.name?.toLowerCase().includes(q) ||
-        (p.sku && p.sku.toLowerCase().includes(q)) ||
-        catName.toLowerCase().includes(q) ||
-        (p.description && p.description.toLowerCase().includes(q)) ||
-        (p.unit && p.unit.toLowerCase().includes(q))
-      );
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
 
-      return matchesCategory && matchesQuery;
+      if (catName.toLowerCase().includes(q)) return true;
+      if (p.is_subscription && ('subscription'.includes(q) || 'saas'.includes(q))) return true;
+
+      for (const key of Object.keys(p || {})) {
+        const val = p[key];
+        if (typeof val === 'string' && val.toLowerCase().includes(q)) return true;
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          for (const subKey of Object.keys(val)) {
+            const subVal = val[subKey];
+            if (typeof subVal === 'string' && subVal.toLowerCase().includes(q)) return true;
+          }
+        }
+      }
+      return false;
     });
   }, [products, categories, searchQuery, selectedCategoryId]);
 

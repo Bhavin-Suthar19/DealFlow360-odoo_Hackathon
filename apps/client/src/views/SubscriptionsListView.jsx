@@ -1,16 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Tabs from '../components/ui/Tabs';
 import Pagination from '../components/ui/Pagination';
 import usePagination from '../hooks/usePagination';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Search, X } from 'lucide-react';
 
 export const SubscriptionsListView = ({ subscriptions = [], onSelectSubscription }) => {
   const [activeTab, setActiveTab] = useState('Active');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredSubs = subscriptions.filter((s) => s.status === activeTab);
+  const filteredSubs = useMemo(() => {
+    return subscriptions.filter((item) => {
+      const matchesTab = item.status === activeTab;
+      if (!matchesTab) return false;
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      for (const key of Object.keys(item || {})) {
+        const val = item[key];
+        if (typeof val === 'string' && val.toLowerCase().includes(q)) return true;
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          for (const subKey of Object.keys(val)) {
+            const subVal = val[subKey];
+            if (typeof subVal === 'string' && subVal.toLowerCase().includes(q)) return true;
+          }
+        }
+      }
+      return false;
+    });
+  }, [subscriptions, activeTab, searchQuery]);
 
   const {
     currentPage,
@@ -38,16 +57,46 @@ export const SubscriptionsListView = ({ subscriptions = [], onSelectSubscription
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs
-        tabs={[
-          { id: 'Active', label: 'Active Subscriptions', badge: subscriptions.filter((s) => s.status === 'Active').length },
-          { id: 'Paused', label: 'Paused', badge: subscriptions.filter((s) => s.status === 'Paused').length },
-          { id: 'Cancelled', label: 'Cancelled', badge: subscriptions.filter((s) => s.status === 'Cancelled').length }
-        ]}
-        activeTab={activeTab}
-        onChange={handleTabChange}
-      />
+      {/* Tabs & Search Bar */}
+      <Card className="p-3.5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                resetPage();
+              }}
+              placeholder="Search subscriptions by ID, customer, plan, cycle, date..."
+              className="w-full pl-10 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#714B67] transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  resetPage();
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <Tabs
+            tabs={[
+              { id: 'Active', label: 'Active Subscriptions', badge: subscriptions.filter((s) => s.status === 'Active').length },
+              { id: 'Paused', label: 'Paused', badge: subscriptions.filter((s) => s.status === 'Paused').length },
+              { id: 'Cancelled', label: 'Cancelled', badge: subscriptions.filter((s) => s.status === 'Cancelled').length }
+            ]}
+            activeTab={activeTab}
+            onChange={handleTabChange}
+          />
+        </div>
+      </Card>
 
       {/* Subscription Table */}
       <Card>
@@ -69,7 +118,7 @@ export const SubscriptionsListView = ({ subscriptions = [], onSelectSubscription
               {paginatedSubs.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-500 italic">
-                    No subscriptions found in '{activeTab}' status
+                    {searchQuery ? `No subscriptions matching "${searchQuery}".` : `No subscriptions found in '${activeTab}' status.`}
                   </td>
                 </tr>
               ) : (

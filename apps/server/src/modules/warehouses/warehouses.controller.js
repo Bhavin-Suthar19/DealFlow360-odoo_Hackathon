@@ -48,8 +48,8 @@ export const updateStock = async (req, res, next) => {
 
 export const getAllStock = async (req, res, next) => {
   try {
-    const result = await warehousesService.getAllStock();
-    return successResponse(res, result);
+    const result = await warehousesService.getAllStock(req.query);
+    return successResponse(res, result.data || result, result.meta || null);
   } catch (err) {
     next(err);
   }

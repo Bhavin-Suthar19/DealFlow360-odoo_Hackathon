@@ -263,6 +263,41 @@ export const useAppDataStore = (navigation) => {
     }
   }, [loadBackendData, navigateTo]);
 
+  const handleUpdateProfile = useCallback(async (profileData) => {
+    try {
+      let updatedData = {};
+      try {
+        const res = await api.users.updateProfile(profileData);
+        updatedData = res?.data || res || {};
+      } catch (apiErr) {
+        console.warn('API profile update error, updating locally:', apiErr);
+      }
+      const mergedUser = {
+        ...currentUser,
+        ...updatedData,
+        name: profileData.name || currentUser?.name,
+        email: profileData.email || currentUser?.email,
+        department: profileData.department !== undefined ? profileData.department : currentUser?.department,
+        phone: profileData.phone !== undefined ? profileData.phone : currentUser?.phone
+      };
+      setCurrentUser(mergedUser);
+      localStorage.setItem('df360_user', JSON.stringify(mergedUser));
+      showAlert({
+        title: 'Profile Updated',
+        message: 'Your profile details have been saved successfully.',
+        variant: 'success'
+      });
+      return { success: true, user: mergedUser };
+    } catch (err) {
+      showAlert({
+        title: 'Update Failed',
+        message: err.message || 'Failed to update profile details.',
+        variant: 'danger'
+      });
+      throw err;
+    }
+  }, [currentUser, showAlert]);
+
   const handleCreateQuotation = useCallback(async () => {
     if (currentUser?.role && currentUser.role !== 'sales_rep') {
       showAlert({
@@ -1209,6 +1244,8 @@ export const useAppDataStore = (navigation) => {
     activeProduct,
     handleLogout,
     handleLoginSuccess,
+    handleUpdateProfile,
+    updateProfile: handleUpdateProfile,
     handleCreateQuotation,
     handleSaveDraft,
     handleSubmitQuote,

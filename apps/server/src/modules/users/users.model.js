@@ -14,7 +14,9 @@ const userSchema = new mongoose.Schema(
       index: true
     },
     team_id: { type: String, ref: 'Team', default: null },
-    customer_id: { type: String, ref: 'Customer', default: null }
+    customer_id: { type: String, ref: 'Customer', default: null },
+    department: { type: String, trim: true, default: '' },
+    phone: { type: String, trim: true, default: '' }
   },
   {
     timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },

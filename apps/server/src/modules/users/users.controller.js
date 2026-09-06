@@ -27,3 +27,24 @@ export const provisionUser = async (req, res, next) => {
     next(err);
   }
 };
+
+export const getProfile = async (req, res, next) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    const result = await usersService.getProfile(userId, req.user);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user?.userId || req.user?.id || req.body?.id || req.params?.id;
+    const result = await usersService.updateProfile(userId, req.body, req.user);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+

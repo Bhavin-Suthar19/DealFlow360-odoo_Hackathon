@@ -7,6 +7,7 @@ const customerUserSchema = new mongoose.Schema(
     customer_id: { type: String, ref: 'Customer', required: true },
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    phone: { type: String, trim: true, default: '' },
     auth_token: { type: String, default: null },
     password_hash: { type: String, default: null }
   },

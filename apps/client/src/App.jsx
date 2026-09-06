@@ -46,6 +46,7 @@ export function App() {
         <LoginView onLoginSuccess={handleLoginSuccess} />
       ) : currentView === 'portal' ? (
         <CustomerPortalNegotiationView
+          currentUser={currentUser}
           quote={activeQuote}
           quotations={dataStore.quotations}
           onSelectQuote={dataStore.setSelectedQuoteId}
@@ -54,6 +55,7 @@ export function App() {
           onSubmitNegotiation={onSubmitNegotiation}
           onConfirmQuote={onConfirmQuote}
           onRefreshData={dataStore.refreshData}
+          onUpdateProfile={dataStore.updateProfile || dataStore.handleUpdateProfile}
         />
       ) : (
         <>

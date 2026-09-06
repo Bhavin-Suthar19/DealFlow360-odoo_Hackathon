@@ -158,15 +158,22 @@ export const DashboardView = ({
   const atRiskDealsCount = safeAlerts.filter((al) => al?.status === 'Open').length;
   const totalPipelineValue = safeQuotations.reduce((sum, q) => sum + (q?.total_amount || 0), 0);
 
-  // Filtered Quotations
+  // Filtered Quotations across all string properties
   const filteredQuotations = safeQuotations.filter((q) => {
     if (!q) return false;
     if (!quoteSearch.trim()) return true;
-    const term = quoteSearch.toLowerCase();
-    const qNum = String(q.quote_number || q._id || q.id || '').toLowerCase();
-    const cName = String(q.customer_name || q.customer_id?.name || '').toLowerCase();
-    const st = String(q.status || '').toLowerCase();
-    return qNum.includes(term) || cName.includes(term) || st.includes(term);
+    const term = quoteSearch.toLowerCase().trim();
+    for (const key of Object.keys(q)) {
+      const val = q[key];
+      if (typeof val === 'string' && val.toLowerCase().includes(term)) return true;
+      if (val && typeof val === 'object' && !Array.isArray(val)) {
+        for (const subKey of Object.keys(val)) {
+          const subVal = val[subKey];
+          if (typeof subVal === 'string' && subVal.toLowerCase().includes(term)) return true;
+        }
+      }
+    }
+    return false;
   });
 
   const totalQuotePages = Math.max(1, Math.ceil(filteredQuotations.length / quotesPerPage));

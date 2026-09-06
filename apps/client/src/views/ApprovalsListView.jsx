@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Pagination from '../components/ui/Pagination';
 import usePagination from '../hooks/usePagination';
-import { ArrowRight, Filter } from 'lucide-react';
+import { ArrowRight, Filter, Search, X } from 'lucide-react';
 
 export const ApprovalsListView = ({ approvals = [], quotations = [], onSelectApproval }) => {
   const [filterStatus, setFilterStatus] = useState('New Requests');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const tabs = [
     { id: 'New Requests', label: 'New Requests', count: approvals.filter((a) => a.status === 'Pending').length },
@@ -19,16 +20,35 @@ export const ApprovalsListView = ({ approvals = [], quotations = [], onSelectApp
   ];
 
   // Filter logic: 'New Requests' filters to pending inbound escalation requests sorted newest first
-  const filteredApprovals =
-    filterStatus === 'New Requests'
-      ? approvals
-          .filter((a) => a.status === 'Pending')
-          .sort((a, b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0))
-      : filterStatus === 'Pending'
-      ? approvals.filter((a) => a.status === 'Pending')
-      : filterStatus === 'All'
-      ? approvals
-      : approvals.filter((a) => a.status === filterStatus);
+  const filteredApprovals = useMemo(() => {
+    let list = approvals;
+    if (filterStatus === 'New Requests') {
+      list = approvals
+        .filter((a) => a.status === 'Pending')
+        .sort((a, b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0));
+    } else if (filterStatus === 'Pending') {
+      list = approvals.filter((a) => a.status === 'Pending');
+    } else if (filterStatus !== 'All') {
+      list = approvals.filter((a) => a.status === filterStatus);
+    }
+
+    if (!searchQuery.trim()) return list;
+    const q = searchQuery.toLowerCase().trim();
+    return list.filter((item) => {
+      // Check every string property of the item
+      for (const key of Object.keys(item || {})) {
+        const val = item[key];
+        if (typeof val === 'string' && val.toLowerCase().includes(q)) return true;
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          for (const subKey of Object.keys(val)) {
+            const subVal = val[subKey];
+            if (typeof subVal === 'string' && subVal.toLowerCase().includes(q)) return true;
+          }
+        }
+      }
+      return false;
+    });
+  }, [approvals, filterStatus, searchQuery]);
 
   const {
     currentPage,
@@ -56,42 +76,73 @@ export const ApprovalsListView = ({ approvals = [], quotations = [], onSelectApp
         </div>
       </div>
 
-      {/* Filter Tabs / Pills with New Requests */}
-      <div className="flex items-center gap-2 pb-2 border-b border-slate-200 overflow-x-auto">
-        <Filter className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
-        {tabs.map((tab) => {
-          const isActive = filterStatus === tab.id;
-          const isNewRequestsTab = tab.id === 'New Requests';
-          return (
-            <button
-              key={tab.id}
-              onClick={() => handleFilterChange(tab.id)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                isActive
-                  ? 'bg-[#714B67] text-white shadow-xs'
-                  : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              {isNewRequestsTab && (
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                </span>
-              )}
-              <span>{tab.label}</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  isActive
-                    ? 'bg-white/25 text-white'
-                    : 'bg-slate-100 text-slate-600'
-                }`}
+      {/* Filter Tabs & Search Bar */}
+      <Card className="p-3.5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                resetPage();
+              }}
+              placeholder="Search approvals by quote #, customer, role, rep, status..."
+              className="w-full pl-10 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#714B67] transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  resetPage();
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700"
               >
-                {tab.count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Filter Tabs / Pills with New Requests */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+            <Filter className="w-3.5 h-3.5 text-slate-400 mr-1 shrink-0 hidden sm:block" />
+            {tabs.map((tab) => {
+              const isActive = filterStatus === tab.id;
+              const isNewRequestsTab = tab.id === 'New Requests';
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleFilterChange(tab.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                    isActive
+                      ? 'bg-[#714B67] text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                  }`}
+                >
+                  {isNewRequestsTab && (
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                    </span>
+                  )}
+                  <span>{tab.label}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      isActive
+                        ? 'bg-white/25 text-white'
+                        : 'bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </Card>
 
       {/* Table */}
       <Card
@@ -120,7 +171,7 @@ export const ApprovalsListView = ({ approvals = [], quotations = [], onSelectApp
               {paginatedApprovals.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-500 italic">
-                    No approval records matching status '{filterStatus}'
+                    {searchQuery ? `No approval records matching "${searchQuery}".` : `No approval records matching status '${filterStatus}'.`}
                   </td>
                 </tr>
               ) : (

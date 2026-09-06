@@ -14,6 +14,30 @@ export const me = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, env.JWT_SECRET);
 
+    if (decoded.tokenType === 'portal' || decoded.customerUserId) {
+      const { CustomerUser, Customer } = await import('../../models/index.js');
+      const custUser = await CustomerUser.findById(decoded.customerUserId || decoded.userId);
+      if (!custUser) {
+        return errorResponse(res, 'Customer user not found', 'NOT_FOUND', 404);
+      }
+      const customerOrg = custUser.customer_id ? await Customer.findById(custUser.customer_id) : null;
+      return successResponse(res, {
+        user: {
+          id: custUser._id,
+          _id: custUser._id,
+          name: custUser.name,
+          email: custUser.email,
+          phone: custUser.phone || '',
+          role: 'customer',
+          customer_id: custUser.customer_id,
+          company_name: customerOrg?.name || custUser.name,
+          tier: customerOrg?.tier || 'Silver',
+          currency: customerOrg?.currency || 'USD',
+          department: 'Customer Organization'
+        }
+      });
+    }
+
     if (!decoded.userId) {
       return errorResponse(res, 'Invalid token', 'UNAUTHORIZED', 401);
     }
@@ -26,10 +50,13 @@ export const me = async (req, res, next) => {
     return successResponse(res, {
       user: {
         id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
-        team_id: user.team_id
+        team_id: user.team_id,
+        department: user.department || '',
+        phone: user.phone || ''
       }
     });
   } catch (err) {
@@ -91,6 +118,18 @@ export const logout = async (req, res, next) => {
 export const portalLogin = async (req, res, next) => {
   try {
     const result = await authService.portalLogin(req.body);
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user?.userId || req.user?.id || req.body?.id;
+    const result = await authService.updateProfile
+      ? await authService.updateProfile(userId, req.body, req.user)
+      : (await import('../users/users.service.js')).default.updateProfile(userId, req.body, req.user);
     return successResponse(res, result);
   } catch (err) {
     next(err);
